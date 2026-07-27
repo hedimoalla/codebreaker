@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Placeholder Steamworks config. Replace <string>YOURAPPID</string> with the
+  real AppID from your Steamworks partner dashboard before using this for
+  anything beyond local testing. See steam/README.md for the full pipeline.
+-->
+<config>
+  <key>steamid</key>
+  <string>YOURAPPID</string>
+  <key>contentbuilder</key>
+  <string>ContentBuilder/builder</string>
+</config>

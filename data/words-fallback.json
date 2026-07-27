@@ -1,0 +1,54 @@
+{
+  "_comment": "Committed fallback word list — ships in git so the game works out of the box on a fresh clone. If data/words-source.json exists locally (gitignored — see README 'Word list'), it takes precedence and this file is not used. This is a curated set of common English words, NOT the official licensed NASPA/OWL2023 Scrabble dictionary.",
+  "words": {
+    "4": [
+      "GAME", "WORD", "PLAY", "QUIZ", "JAZZ", "FIZZ", "BUZZ", "ZERO", "ZOOM", "QUAY",
+      "QUIT", "QUIP", "QUAD", "OXEN", "MAKE", "TAKE", "CAME", "NAME", "TIME", "LIFE",
+      "LOVE", "HOME", "WORK", "BOOK", "READ", "BLUE", "GOLD", "FIRE", "MOON", "STAR",
+      "RAIN", "SNOW", "WIND", "LEAF", "TREE", "ROCK", "SAND", "LAKE", "HILL", "CAKE",
+      "MILK", "SOUP", "RICE", "FISH", "BIRD", "BEAR", "WOLF", "DEER", "GOAT", "DUCK"
+    ],
+    "5": [
+      "HELLO", "WORLD", "HOUSE", "MOUSE", "PHONE", "WATER", "MUSIC", "MOVIE", "LEARN",
+      "STUDY", "LIGHT", "NIGHT", "RIGHT", "MIGHT", "FIGHT", "SIGHT", "BROWN", "GREEN",
+      "WHITE", "BLACK", "QUICK", "QUIET", "QUEST", "QUEEN", "QUITE", "QUOTE", "SPACE",
+      "PLACE", "GRACE", "PEACE", "BEACH", "REACH", "TEACH", "BREAK", "SPEAK", "GREAT",
+      "CLOUD", "STORM", "RIVER", "OCEAN", "FIELD", "STONE", "GLASS", "PAPER", "TABLE",
+      "CHAIR", "BREAD", "FRUIT", "HONEY", "SUGAR", "LEMON", "GRAPE", "APPLE", "MANGO"
+    ],
+    "6": [
+      "FRIEND", "FAMILY", "MOTHER", "FATHER", "SISTER", "SCHOOL", "PLANET", "GARDEN",
+      "FLOWER", "FOREST", "ISLAND", "BUTTER", "LETTER", "BETTER", "NUMBER", "SUMMER",
+      "WINTER", "SPRING", "ORANGE", "PURPLE", "YELLOW", "SILVER", "GOLDEN", "SIMPLE",
+      "MARKET", "BRIDGE", "CASTLE", "DESERT", "DRAGON", "ENGINE", "FACTOR", "GALAXY",
+      "HAMMER", "KETTLE", "MODERN", "NATION", "ORIGIN", "PENCIL", "QUARTZ", "RANGER",
+      "SILENT", "TUNNEL", "VOYAGE", "WINDOW"
+    ],
+    "7": [
+      "HISTORY", "SCIENCE", "ENGLISH", "STUDENT", "TEACHER", "BROTHER", "MORNING",
+      "EVENING", "WEEKEND", "WEEKDAY", "MONTHLY", "HEALTHY", "WEALTHY", "QUICKLY",
+      "QUIETLY", "FINALLY", "USUALLY", "SPECIAL", "NATURAL", "PERFECT", "PRESENT",
+      "SUBJECT", "PROJECT", "PROBLEM", "PROGRAM", "PROMISE", "PROVIDE", "PROTECT",
+      "JOURNEY", "KITCHEN", "LIBRARY", "MACHINE", "NETWORK", "OUTLINE", "PICTURE",
+      "QUALIFY", "RAINBOW", "STATION", "THUNDER", "VACCINE", "WEATHER", "WEBSITE"
+    ],
+    "8": [
+      "COMPUTER", "INTERNET", "PASSWORD", "QUESTION", "ALPHABET", "BIRTHDAY",
+      "HOLIDAYS", "VACATION", "BUSINESS", "BUILDING", "MOUNTAIN", "LEARNING", "TEACHING",
+      "THINKING", "SPEAKING", "SWIMMING", "STUDYING", "ELEPHANT", "DINOSAUR", "CRYSTALS",
+      "HOSPITAL", "AIRPLANE", "BASEBALL", "FOOTBALL", "BACKPACK", "CALENDAR", "DAUGHTER",
+      "ELEVATOR"
+    ],
+    "9": [
+      "ADVENTURE", "BEAUTIFUL", "CELEBRATE", "DIFFERENT", "EDUCATION", "FANTASTIC",
+      "GENERATOR", "HAPPINESS", "KNOWLEDGE", "LANDSCAPE", "VOLUNTEER", "WONDERFUL"
+    ],
+    "10": [
+      "INCREDIBLE", "JOURNALIST", "NAVIGATION", "QUESTIONER", "REVOLUTION", "STRATEGIST",
+      "TECHNOLOGY", "UNIVERSITY"
+    ],
+    "11": [
+      "MAGNIFICENT", "OPPORTUNITY", "PERSPECTIVE"
+    ]
+  }
+}

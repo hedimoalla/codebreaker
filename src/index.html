@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+    <title>CodeBreaker - Word Puzzle Game</title>
+    <link rel="icon" href="assets/icon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="main-game-area">
+            <div class="top-bar">
+                <div class="title-block">
+                    <h1>CodeBreaker</h1>
+                    <p class="subtitle">Crack the number sequence to reveal the hidden word</p>
+                </div>
+                <div class="player-bar">
+                    <div class="shards-pill" id="shardsPill" title="Shards — earn by solving, spend on hints">
+                        <span class="shards-icon">&#9670;</span>
+                        <span id="shardsValue">0</span>
+                    </div>
+                    <button class="icon-btn" id="audioToggleBtn" title="Toggle sound">&#128266;</button>
+                    <button class="icon-btn" id="achievementsBtn" title="Achievements">&#127942;</button>
+                    <button class="icon-btn" id="storeBtn" title="Store">&#128722;</button>
+                    <button class="icon-btn" id="settingsBtn" title="Settings">&#9881;</button>
+                </div>
+            </div>
+
+            <div class="game-info">
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="currentRound">1</div>
+                        <div>Round</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="correctGuesses">0</div>
+                        <div>Correct</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalAttempts">0</div>
+                        <div>Attempts</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="streakValue">0</div>
+                        <div>Streak</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <strong>Decode this scrambled number sequence:</strong>
+                </div>
+                <div class="challenge-display" id="challengeNumbers">Loading<span class="loading-dots">...</span></div>
+
+                <div class="hint-section">
+                    <div class="hint-text">Hints:</div>
+                    <div class="word-length-hint" id="wordLengthHint">Word length: ? letters</div>
+                    <div class="difficulty-hint" id="difficultyHint">Difficulty: —</div>
+                </div>
+            </div>
+
+            <div class="scribble-area">
+                <div class="scribble-header">
+                    <span>&#128221; Scribble Area - Draft your solution</span>
+                    <button class="scribble-btn" id="clearCanvasBtn">Clear</button>
+                </div>
+                <canvas class="scribble-canvas" id="scribbleCanvas"></canvas>
+            </div>
+
+            <div class="ambiguity-warning" id="ambiguityWarning">
+                &#9888;&#65039; Multiple interpretations possible! Here's how the digits could be parsed:
+                <div class="parsing-options" id="parsingOptions"></div>
+            </div>
+
+            <div class="input-group">
+                <label for="letterContainer">Enter your guess (one letter per box):</label>
+                <div class="letter-input-container" id="letterContainer">
+                    <!-- Dynamic letter boxes are created here by game.js -->
+                </div>
+            </div>
+
+            <div class="game-controls">
+                <button class="convert-btn" id="submitBtn">Submit Guess</button>
+                <button class="hint-btn" id="hintBtn">Hint (<span id="hintCost">15</span>&#9670;)</button>
+                <button class="reset-btn" id="newGameBtn">New Game</button>
+                <button class="clear-btn" id="clearBtn">Clear</button>
+            </div>
+
+            <div class="result empty" id="result">
+                <div class="result-text" id="resultText">Make your guess to see the result!</div>
+            </div>
+
+            <div class="validity-indicator checking" id="validityIndicator" style="display: none;">
+                <span id="validityText">Checking your guess<span class="loading-dots">...</span></span>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="session-card">
+                <div class="session-card-title">This Session</div>
+                <div class="session-row"><span>Best round</span><span id="bestRoundValue">1</span></div>
+                <div class="session-row"><span>Total correct</span><span id="lifetimeCorrectValue">0</span></div>
+                <div class="session-row"><span>Achievements</span><span id="achievementsCountValue">0/0</span></div>
+            </div>
+
+            <div class="alphabet-reference">
+                <strong>Reference Guide:</strong>
+                <div class="alphabet-grid" id="alphabetGrid">
+                    <!-- Populated by game.js from A=1 to Z=26 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Store modal -->
+    <div class="modal-overlay" id="storeModal" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Store <span class="sandbox-badge">Sandbox — simulated purchases</span></h2>
+                <button class="modal-close" data-close-modal="storeModal">&times;</button>
+            </div>
+            <div class="modal-body" id="storeItems"><!-- Populated by game.js --></div>
+        </div>
+    </div>
+
+    <!-- Achievements modal -->
+    <div class="modal-overlay" id="achievementsModal" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Achievements</h2>
+                <button class="modal-close" data-close-modal="achievementsModal">&times;</button>
+            </div>
+            <div class="modal-body" id="achievementsList"><!-- Populated by game.js --></div>
+        </div>
+    </div>
+
+    <!-- Settings modal -->
+    <div class="modal-overlay" id="settingsModal" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" data-close-modal="settingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label class="settings-row">
+                    <span>Sound effects</span>
+                    <input type="checkbox" id="audioToggleCheckbox" checked>
+                </label>
+                <div class="settings-row">
+                    <span>Ink theme</span>
+                    <select id="inkThemeSelect">
+                        <option value="default">Default (Purple)</option>
+                        <option value="neon">Neon Green</option>
+                        <option value="gold">Gold</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <span>Ads</span>
+                    <span id="adsStatusLabel">Enabled</span>
+                </div>
+                <div class="settings-row">
+                    <span>App version</span>
+                    <span id="appVersionLabel">1.0.0 (web)</span>
+                </div>
+                <button class="reset-btn" id="resetProgressBtn" style="width:100%; margin-top:15px;">Reset All Progress</button>
+                <a href="privacy.html" class="footer-link" style="display:block; text-align:center; margin-top:15px;">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- About modal (triggered from Electron app menu) -->
+    <div class="modal-overlay" id="aboutModal" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h2>About CodeBreaker</h2>
+                <button class="modal-close" data-close-modal="aboutModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>CodeBreaker — crack scrambled A=1..Z=26 number ciphers to reveal hidden words.</p>
+                <p>Version <span id="aboutVersionLabel">1.0.0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <a href="privacy.html">Privacy Policy</a>
+        <span class="footer-sep">&middot;</span>
+        <span id="footerVersion">v1.0.0</span>
+    </footer>
+
+    <div class="toast" id="toast" hidden></div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="loading-spinner"></div>
+            <div id="loadingText">Loading word database<span class="loading-dots">...</span></div>
+        </div>
+    </div>
+
+    <script src="vendor/sql-js/sql-wasm.js"></script>
+    <script src="analytics.js"></script>
+    <script src="constants.js"></script>
+    <script src="words-db.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

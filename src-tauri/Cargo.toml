@@ -1,0 +1,19 @@
+[package]
+name = "codebreaker"
+version = "1.0.0"
+description = "CodeBreaker - crack the number cipher"
+authors = ["Hedi Moalla"]
+license = "MIT"
+repository = "https://github.com/hedimoalla/codebreaker"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "1", features = ["shell-open"] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

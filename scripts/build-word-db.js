@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+/**
+ * Compiles data/words-source.json into a real SQLite database file at
+ * src/data/words.sqlite, queried at runtime by src/words-db.js (via sql.js,
+ * a WASM SQLite build that runs identically in Electron, the browser, and
+ * Capacitor's mobile WebView — no native module compilation required).
+ *
+ * Usage: node scripts/build-word-db.js
+ * (also runs automatically via `npm run db:build` / after `npm install`)
+ */
+const fs = require('fs');
+const path = require('path');
+const initSqlJs = require('sql.js');
+
+// words-source.json is gitignored — a developer's local/private/licensed word
+// list (e.g. a real NASPA/OWL2023 export) that never gets committed. When
+// absent, we fall back to the small list committed in words-fallback.json so
+// the game still works right after a fresh `git clone && npm install`.
+const PRIVATE_SOURCE_PATH = path.join(__dirname, '..', 'data', 'words-source.json');
+const FALLBACK_SOURCE_PATH = path.join(__dirname, '..', 'data', 'words-fallback.json');
+const OUT_DIR = path.join(__dirname, '..', 'src', 'data');
+const OUT_PATH = path.join(OUT_DIR, 'words.sqlite');
+const WASM_DIR = path.dirname(require.resolve('sql.js/dist/sql-wasm.wasm'));
+
+async function main() {
+  const usingPrivateSource = fs.existsSync(PRIVATE_SOURCE_PATH);
+  const sourcePath = usingPrivateSource ? PRIVATE_SOURCE_PATH : FALLBACK_SOURCE_PATH;
+  console.log(`Using word list: ${path.relative(process.cwd(), sourcePath)}${usingPrivateSource ? ' (local, gitignored)' : ' (committed fallback)'}`);
+
+  const source = JSON.parse(fs.readFileSync(sourcePath, 'utf-8'));
+  const wordsByLength = source.words;
+
+  const SQL = await initSqlJs({ locateFile: (file) => path.join(WASM_DIR, file) });
+  const db = new SQL.Database();
+
+  db.run(`
+    CREATE TABLE words (
+      word TEXT PRIMARY KEY,
+      length INTEGER NOT NULL
+    );
+    CREATE INDEX idx_words_length ON words(length);
+  `);
+
+  const insert = db.prepare('INSERT OR IGNORE INTO words (word, length) VALUES (?, ?)');
+  let total = 0;
+  let rejected = 0;
+
+  Object.entries(wordsByLength).forEach(([lengthKey, list]) => {
+    const expectedLength = Number(lengthKey);
+    list.forEach((raw) => {
+      const word = String(raw).toUpperCase().trim();
+      if (!/^[A-Z]+$/.test(word) || word.length !== expectedLength) {
+        rejected += 1;
+        console.warn(`  ! skipping malformed entry "${raw}" (expected length ${expectedLength})`);
+        return;
+      }
+      insert.run([word, word.length]);
+      total += 1;
+    });
+  });
+  insert.free();
+
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  const bytes = db.export();
+  fs.writeFileSync(OUT_PATH, Buffer.from(bytes));
+  db.close();
+
+  console.log(`Built ${OUT_PATH}`);
+  console.log(`  ${total} words inserted${rejected ? `, ${rejected} rejected` : ''}`);
+
+  const lengthCounts = Object.keys(wordsByLength)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((len) => `${len}:${wordsByLength[len].length}`)
+    .join('  ');
+  console.log(`  by length -> ${lengthCounts}`);
+}
+
+main().catch((err) => {
+  console.error('Failed to build word database:', err);
+  process.exit(1);
+});

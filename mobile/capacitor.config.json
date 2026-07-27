@@ -1,0 +1,14 @@
+{
+  "appId": "com.hedimoalla.codebreaker",
+  "appName": "CodeBreaker",
+  "webDir": "../www",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#667eea",
+  "android": {
+    "backgroundColor": "#667eea"
+  },
+  "ios": {
+    "backgroundColor": "#667eea",
+    "contentInset": "always"
+  }
+}

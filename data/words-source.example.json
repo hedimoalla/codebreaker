@@ -1,0 +1,7 @@
+{
+  "_comment": "Template only — copy this file to data/words-source.json (gitignored) to use your own private/licensed word list (e.g. a real NASPA/OWL2023 export) instead of the small committed data/words-fallback.json. Keys are word length as a string; values are arrays of uppercase words of exactly that length. Run `npm run db:build` after editing.",
+  "words": {
+    "4": ["EXAMPLE_REPLACE_ME_WITH_A_4_LETTER_WORD"],
+    "5": ["EXAMPLE_REPLACE_ME_WITH_A_5_LETTER_WORD"]
+  }
+}

@@ -1,0 +1,27 @@
+// Steamworks ContentBuilder app build script.
+// Placeholder values (AppID 480 = Valve's public "Spacewar" test app, safe for
+// local dry-runs). Replace with your real AppID + depot ID from the
+// Steamworks partner dashboard before uploading for real. Run from steam/:
+//   steamcmd +login <user> +run_app_build depot_config.vdf +quit
+"appbuild"
+{
+	"appid"		"480"
+	"desc"		"CodeBreaker build"
+	"buildoutput"	"./output/"
+	"contentroot"	"../dist/win-unpacked/"
+	"setlive"	""
+	"preview"	"1"
+
+	"depots"
+	{
+		"481"
+		{
+			"FileMapping"
+			{
+				"LocalPath"	"*"
+				"DepotPath"	"."
+				"recursive"	"1"
+			}
+		}
+	}
+}

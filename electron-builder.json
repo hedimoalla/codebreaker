@@ -1,0 +1,71 @@
+{
+  "appId": "com.hedimoalla.codebreaker",
+  "productName": "CodeBreaker",
+  "copyright": "Copyright © 2026 Hedi Moalla",
+  "directories": {
+    "output": "dist",
+    "buildResources": "build"
+  },
+  "files": [
+    "src/**/*",
+    "main.js",
+    "preload.js",
+    "package.json",
+    "!**/*.map"
+  ],
+  "mac": {
+    "category": "public.app-category.games",
+    "icon": "assets/icon.icns",
+    "target": [
+      { "target": "dmg", "arch": ["x64", "arm64"] },
+      { "target": "zip", "arch": ["x64", "arm64"] }
+    ],
+    "darkModeSupport": true,
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist"
+  },
+  "win": {
+    "icon": "assets/icon.ico",
+    "target": [
+      { "target": "nsis", "arch": ["x64"] },
+      { "target": "portable", "arch": ["x64"] }
+    ],
+    "publisherName": "Hedi Moalla",
+    "verifyUpdateCodeSignature": false
+  },
+  "linux": {
+    "icon": "assets/icon.png",
+    "category": "Game",
+    "target": [
+      { "target": "AppImage", "arch": ["x64"] },
+      { "target": "deb", "arch": ["x64"] }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "assets/icon.ico",
+    "uninstallerIcon": "assets/icon.ico",
+    "installerHeaderIcon": "assets/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "CodeBreaker"
+  },
+  "dmg": {
+    "title": "CodeBreaker Installer",
+    "icon": "assets/icon.icns",
+    "iconSize": 100,
+    "contents": [
+      { "x": 130, "y": 220 },
+      { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+    ]
+  },
+  "appImage": {
+    "artifactName": "${productName}-${version}.${ext}"
+  },
+  "publish": null
+}

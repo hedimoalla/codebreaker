@@ -1,0 +1,65 @@
+{
+  "name": "codebreaker",
+  "productName": "CodeBreaker",
+  "version": "1.0.0",
+  "description": "Crack number sequences to reveal hidden words - A challenging word puzzle game",
+  "main": "main.js",
+  "homepage": "https://github.com/hedimoalla/codebreaker",
+  "author": {
+    "name": "Hedi Moalla",
+    "email": "hedimoalla@gmail.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "node scripts/build-web.js",
+    "web:serve": "npm run build && http-server www -p 8080 -c-1 -o",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --mac --win --linux",
+    "dist": "electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "cap:add:ios": "cd mobile && npx cap add ios",
+    "cap:add:android": "cd mobile && npx cap add android",
+    "cap:sync": "npm run build && cd mobile && npx cap sync",
+    "cap:open:ios": "cd mobile && npx cap open ios",
+    "cap:open:android": "cd mobile && npx cap open android",
+    "cap:assets": "cd mobile && npx capacitor-assets generate",
+    "tauri:icon": "tauri icon assets/icon.png -o src-tauri/icons",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "db:build": "node scripts/build-word-db.js",
+    "vendor:prepare": "node scripts/prepare-vendor.js",
+    "test": "node --test",
+    "postinstall": "node scripts/prepare-vendor.js && node scripts/build-word-db.js && electron-builder install-app-deps"
+  },
+  "keywords": [
+    "game",
+    "puzzle",
+    "word-game",
+    "codebreaker",
+    "electron",
+    "desktop-game"
+  ],
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/ios": "^6.1.2",
+    "@tauri-apps/cli": "^1.6.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
