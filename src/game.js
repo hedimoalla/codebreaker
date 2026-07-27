@@ -160,6 +160,7 @@
       bestStreak: 0,
       fastestSolveMs: null,
       solvedAmbiguousCount: 0,
+      hasSeenRules: false,
       achievements: {},
       purchases: {},
       settings: { audioEnabled: true, inkTheme: 'default', adsFree: false }
@@ -248,7 +249,7 @@
       'scribbleCanvas', 'clearCanvasBtn', 'ambiguityWarning', 'parsingOptions',
       'letterContainer', 'submitBtn', 'hintBtn', 'hintCost', 'newGameBtn', 'clearBtn',
       'result', 'resultText', 'validityIndicator', 'validityText',
-      'shardsValue', 'audioToggleBtn', 'achievementsBtn', 'storeBtn', 'settingsBtn',
+      'shardsValue', 'audioToggleBtn', 'achievementsBtn', 'storeBtn', 'settingsBtn', 'rulesBtn', 'rulesModal',
       'bestRoundValue', 'lifetimeCorrectValue', 'achievementsCountValue', 'alphabetGrid',
       'storeModal', 'storeItems', 'achievementsModal', 'achievementsList',
       'settingsModal', 'audioToggleCheckbox', 'inkThemeSelect', 'adsStatusLabel',
@@ -796,6 +797,7 @@
     state.dom.hintBtn.addEventListener('click', useHint);
     state.dom.clearCanvasBtn.addEventListener('click', clearCanvas);
 
+    state.dom.rulesBtn.addEventListener('click', () => openModal('rulesModal'));
     state.dom.achievementsBtn.addEventListener('click', () => openModal('achievementsModal'));
     state.dom.storeBtn.addEventListener('click', () => openModal('storeModal'));
     state.dom.settingsBtn.addEventListener('click', () => openModal('settingsModal'));
@@ -868,6 +870,12 @@
     state.dom.loadingOverlay.hidden = true;
     startNewRound();
     ANALYTICS.track('game_start', { version, wordCount: WORDSDB.wordCount() });
+
+    if (!state.profile.hasSeenRules) {
+      state.profile.hasSeenRules = true;
+      persistProfile();
+      openModal('rulesModal');
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
