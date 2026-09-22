@@ -5,19 +5,23 @@ const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const isDev = process.argv.includes('--dev');
-const SAVE_FILE = path.join(app.getPath('userData'), 'save.json');
 
 let mainWindow;
 
+function getSaveFile() {
+  return path.join(app.getPath('userData'), 'save.json');
+}
+
 function readSave() {
   try {
-    return JSON.parse(fs.readFileSync(SAVE_FILE, 'utf-8'));
+    return JSON.parse(fs.readFileSync(getSaveFile(), 'utf-8'));
   } catch {
     return null;
   }
 }
 
 function writeSave(data) {
+  const SAVE_FILE = getSaveFile();
   fs.mkdirSync(path.dirname(SAVE_FILE), { recursive: true });
   fs.writeFileSync(SAVE_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
@@ -97,21 +101,23 @@ function buildMenu() {
   return Menu.buildFromTemplate(template);
 }
 
-// --- Persistence IPC (see src/persistence.js in the renderer) ---
-ipcMain.handle('storage:get', () => readSave());
-ipcMain.handle('storage:set', (_event, data) => {
-  writeSave(data);
-  return true;
-});
-ipcMain.handle('app:getVersion', () => app.getVersion());
-ipcMain.handle('app:getEnv', () => ({
-  STEAM_APP_ID: process.env.STEAM_APP_ID || '480',
-  ANALYTICS_ENABLED: process.env.ANALYTICS_ENABLED === 'true',
-  IAP_SANDBOX: process.env.IAP_SANDBOX !== 'false',
-  APP_ENV: process.env.APP_ENV || 'development'
-}));
+app.whenReady().then(() => {
+  // --- Persistence IPC (see src/persistence.js in the renderer) ---
+  ipcMain.handle('storage:get', () => readSave());
+  ipcMain.handle('storage:set', (_event, data) => {
+    writeSave(data);
+    return true;
+  });
+  ipcMain.handle('app:getVersion', () => app.getVersion());
+  ipcMain.handle('app:getEnv', () => ({
+    STEAM_APP_ID: process.env.STEAM_APP_ID || '480',
+    ANALYTICS_ENABLED: process.env.ANALYTICS_ENABLED === 'true',
+    IAP_SANDBOX: process.env.IAP_SANDBOX !== 'false',
+    APP_ENV: process.env.APP_ENV || 'development'
+  }));
 
-app.whenReady().then(createWindow);
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

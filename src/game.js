@@ -148,6 +148,57 @@
       } catch {
         // Storage unavailable (private browsing, quota) — progress just won't persist.
       }
+      // If cloud save is enabled and session exists, also push to cloud.
+      if (profile.settings?.cloudSaveEnabled && typeof window.SupabaseClient !== 'undefined') {
+        try {
+          const session = await window.SupabaseClient.getSession();
+          if (session) {
+            await window.SupabaseClient.upsertProfile({
+              display_name: profile.displayName || 'Player',
+              shards: profile.shards,
+              correct_guesses: profile.correctGuesses,
+              total_attempts: profile.totalAttempts,
+              best_round: profile.bestRound,
+              best_streak: profile.bestStreak,
+              fastest_solve_ms: profile.fastestSolveMs,
+              solved_ambiguous_count: profile.solvedAmbiguousCount,
+              has_seen_rules: profile.hasSeenRules,
+              achievements: profile.achievements,
+              purchases: profile.purchases,
+              settings: profile.settings
+            });
+          }
+        } catch (err) {
+          console.warn('Cloud sync failed:', err.message);
+          // Silently fail — local save succeeded, cloud sync is optional.
+        }
+      }
+    },
+    async pullFromCloud() {
+      if (typeof window.SupabaseClient === 'undefined') return null;
+      try {
+        const session = await window.SupabaseClient.getSession();
+        if (!session) return null;
+        const profile = await window.SupabaseClient.fetchProfile();
+        if (!profile) return null;
+        // Map cloud profile to local structure
+        return {
+          shards: profile.shards,
+          correctGuesses: profile.correct_guesses,
+          totalAttempts: profile.total_attempts,
+          bestRound: profile.best_round,
+          bestStreak: profile.best_streak,
+          fastestSolveMs: profile.fastest_solve_ms,
+          solvedAmbiguousCount: profile.solved_ambiguous_count,
+          hasSeenRules: profile.has_seen_rules,
+          achievements: profile.achievements || {},
+          purchases: profile.purchases || {},
+          settings: profile.settings || {}
+        };
+      } catch (err) {
+        console.warn('Cloud pull failed:', err.message);
+        return null;
+      }
     }
   };
 
@@ -163,7 +214,10 @@
       hasSeenRules: false,
       achievements: {},
       purchases: {},
-      settings: { audioEnabled: true, inkTheme: 'default', adsFree: false }
+      settings: { audioEnabled: true, inkTheme: 'default', adsFree: false },
+      dailyStreak: 0,
+      dailyBestRound: 0,
+      lastDailyPlayDate: null
     };
   }
 
@@ -236,6 +290,7 @@
       roundIsAmbiguous: false,
       isActive: true
     },
+    difficulty: 'medium',
     dom: {},
     canvas: { ctx: null, drawing: false }
   };
@@ -250,11 +305,16 @@
       'letterContainer', 'submitBtn', 'hintBtn', 'hintCost', 'newGameBtn', 'clearBtn',
       'result', 'resultText', 'validityIndicator', 'validityText',
       'shardsValue', 'audioToggleBtn', 'achievementsBtn', 'storeBtn', 'settingsBtn', 'rulesBtn', 'rulesModal',
+      'languageToggleBtn', 'themeToggleBtn',
       'bestRoundValue', 'lifetimeCorrectValue', 'achievementsCountValue', 'alphabetGrid',
       'storeModal', 'storeItems', 'achievementsModal', 'achievementsList',
-      'settingsModal', 'audioToggleCheckbox', 'inkThemeSelect', 'adsStatusLabel',
+      'settingsModal', 'audioToggleCheckbox', 'inkThemeSelect', 'adsStatusLabel', 'cloudSaveToggle',
       'appVersionLabel', 'aboutVersionLabel', 'aboutModal', 'resetProgressBtn',
-      'toast', 'loadingOverlay', 'loadingText', 'footerVersion'
+      'toast', 'loadingOverlay', 'loadingText', 'footerVersion',
+      'languageSelect', 'themeSelect',
+      'languageScreen', 'enLangBtn', 'frLangBtn',
+      'gameMenu', 'easyBtn', 'mediumBtn', 'hardBtn', 'playBtn', 'menuSettingsBtn',
+      'dailyChallengeBtn', 'dailyStats', 'dailyStreakValue', 'dailyBestRoundValue'
     ];
     ids.forEach((id) => { state.dom[id] = q(id); });
   }
@@ -341,7 +401,7 @@
     const container = state.dom.letterContainer;
     container.innerHTML = '';
 
-    const tier = CONSTANTS.tierForRound(state.run.round);
+    const tier = getTierForRound(state.run.round);
     const checkpoints = pickSumCheckpoints(wordLength, tier.sumHints);
     const numbers = wordToNumbers(state.run.currentWord);
     let cumulative = 0;
@@ -455,16 +515,19 @@
     state.run.roundIsAmbiguous = ambiguousMatches.length > 1;
     renderAmbiguity(ambiguousMatches);
 
-    const tier = CONSTANTS.tierForRound(state.run.round);
+    const tier = getTierForRound(state.run.round);
+    const i18n = window.I18n;
     state.dom.challengeNumbers.textContent = state.run.scrambledSequence;
-    state.dom.wordLengthHint.textContent = `Word length: ${state.run.currentWord.length} letters`;
-    state.dom.difficultyHint.textContent = `Difficulty: ${tier.label} (Round ${state.run.round})`;
+    const wordLengthKey = i18n.t('wordLength');
+    state.dom.wordLengthHint.textContent = wordLengthKey.replace('?', state.run.currentWord.length);
+    const roundKey = i18n.t('round');
+    state.dom.difficultyHint.textContent = `${i18n.t('difficulty').replace('—', tier.label)} (${roundKey} ${state.run.round})`;
     state.dom.currentRound.textContent = String(state.run.round);
     state.dom.streakValue.textContent = String(state.run.streak);
 
     createLetterBoxes(state.run.currentWord.length);
 
-    state.dom.resultText.textContent = 'Make your guess to see the result!';
+    state.dom.resultText.textContent = i18n.t('makeGuess');
     state.dom.result.className = 'result empty';
     state.dom.validityIndicator.style.display = 'none';
 
@@ -489,10 +552,7 @@
   }
 
   function newGame() {
-    state.run.round = 1;
-    state.run.streak = 0;
-    state.dom.streakValue.textContent = '0';
-    startNewRound();
+    showMenu();
     AudioFX.click();
   }
 
@@ -568,7 +628,8 @@
     }
     if (state.run.roundIsAmbiguous) state.profile.solvedAmbiguousCount += 1;
 
-    validityText.innerHTML = `\u{1F389} CORRECT! +${shardsEarned}◆ &nbsp; (${(solveMs / 1000).toFixed(1)}s)`;
+    const i18n = window.I18n;
+    validityText.innerHTML = `🎉 ${i18n.t('correctGuess')} +${shardsEarned}◆ &nbsp; (${(solveMs / 1000).toFixed(1)}${i18n.t('solveTime')})`;
 
     const unlocked = checkAchievements(state.profile);
 
@@ -582,19 +643,76 @@
     if (state.run.round % 5 === 0) AdManager.showInterstitial();
 
     state.run.isActive = false;
+
+    if (state.mode === 'daily') {
+      // Daily challenge complete - show stats instead of next round
+      setTimeout(() => showDailyChallengeComplete(solveMs, shardsEarned, indicator), 2200);
+    } else {
+      // Regular mode - continue to next round
+      setTimeout(() => {
+        state.run.round += 1;
+        state.run.isActive = true;
+        startNewRound();
+        indicator.style.display = 'none';
+      }, 2200);
+    }
+  }
+
+  function showDailyChallengeComplete(solveMs, shardsEarned, indicator) {
+    const i18n = window.I18n;
+    indicator.style.display = 'none';
+
+    // Update daily stats
+    state.profile.dailyStreak = (state.profile.lastDailyPlayDate === getCurrentDate())
+      ? state.profile.dailyStreak + 1
+      : 1;
+    state.profile.lastDailyPlayDate = getCurrentDate();
+    state.profile.dailyBestRound = Math.max(state.profile.dailyBestRound || 0, 1);
+
+    persistProfile();
+
+    // Show completion modal
+    const modal = state.dom.result;
+    modal.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px;">
+        <h2 style="color: #667eea; font-size: 2em; margin-bottom: 20px;">🎯 Daily Challenge Complete!</h2>
+        <div style="background: rgba(102, 126, 234, 0.1); border-radius: 12px; padding: 30px; margin-bottom: 20px;">
+          <div style="margin-bottom: 20px;">
+            <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">Word: ${state.run.currentWord}</div>
+            <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">Time: ${(solveMs / 1000).toFixed(1)}s</div>
+            <div style="color: #667eea; font-size: 1.1em; font-weight: bold;">+${shardsEarned}◆</div>
+          </div>
+          <hr style="border: none; border-top: 1px solid rgba(102, 126, 234, 0.2); margin: 20px 0;">
+          <div style="font-size: 0.95em;">
+            <div style="margin: 10px 0;">Current Streak: <strong>${state.profile.dailyStreak}</strong></div>
+            <div style="margin: 10px 0;">Attempts: <strong>${state.run.attemptsThisRound}</strong></div>
+            <div style="margin: 10px 0;">Total Shards: <strong>${state.profile.shards}</strong></div>
+          </div>
+        </div>
+        <button id="dailyBackBtn" style="background: #667eea; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1em; cursor: pointer;">Back to Menu</button>
+      </div>
+    `;
+    modal.className = 'result correct';
+
+    // Add click handler after DOM is updated
     setTimeout(() => {
-      state.run.round += 1;
-      state.run.isActive = true;
-      startNewRound();
-      indicator.style.display = 'none';
-    }, 2200);
+      const backBtn = document.getElementById('dailyBackBtn');
+      if (backBtn) {
+        backBtn.addEventListener('click', showMenu);
+      }
+    }, 0);
+  }
+
+  function getCurrentDate() {
+    return new Date().toISOString().split('T')[0];
   }
 
   function handleValidButWrongGuess(result, indicator, validityText) {
     AudioFX.incorrect();
     result.classList.add('incorrect');
     indicator.className = 'validity-indicator invalid';
-    validityText.innerHTML = `❌ Valid word, but not the answer! The word was: ${state.run.currentWord}`;
+    const i18n = window.I18n;
+    validityText.innerHTML = `❌ ${i18n.t('incorrectGuess')} ${i18n.t('wordWas')} ${state.run.currentWord}`;
     state.run.streak = 0;
     state.dom.streakValue.textContent = '0';
 
@@ -614,7 +732,8 @@
     AudioFX.invalid();
     result.classList.add('invalid');
     indicator.className = 'validity-indicator invalid';
-    validityText.innerHTML = '❌ Not a valid word! Try again.';
+    const i18n = window.I18n;
+    validityText.innerHTML = `❌ ${i18n.t('notAWord')}`;
     ANALYTICS.track('guess_incorrect', { round: state.run.round, guessedValidWord: false });
   }
 
@@ -649,6 +768,126 @@
 
   function updateShardsDisplay() {
     state.dom.shardsValue.textContent = String(state.profile.shards);
+  }
+
+  function updateUILanguage() {
+    const i18n = window.I18n;
+
+    // Update all static labels
+    document.documentElement.lang = i18n.getLanguage();
+    document.title = i18n.t('pageTitle');
+    state.dom.languageSelect.value = i18n.getLanguage();
+    state.dom.themeSelect.value = i18n.getTheme();
+
+    // Update page title and subtitle
+    const h1 = document.querySelector('h1');
+    if (h1) h1.textContent = i18n.t('title');
+    const subtitle = document.querySelector('.subtitle');
+    if (subtitle) subtitle.textContent = i18n.t('subtitle');
+
+    // Update button titles for tooltips (keep emoji, update titles only)
+    state.dom.rulesBtn.title = i18n.t('howToPlay');
+    state.dom.audioToggleBtn.title = i18n.t('audioToggleBtn');
+    state.dom.languageToggleBtn.title = `${i18n.t('language')}: ${i18n.getLanguage().toUpperCase()}`;
+    state.dom.themeToggleBtn.title = `${i18n.t('theme')}: ${i18n.t(i18n.getTheme())}`;
+    state.dom.achievementsBtn.title = i18n.t('achievements');
+    state.dom.storeBtn.title = i18n.t('store');
+    state.dom.settingsBtn.title = i18n.t('settings');
+
+    // Update game stats labels
+    document.querySelectorAll('.stat-item').forEach((item, i) => {
+      const labels = [i18n.t('round'), i18n.t('correct'), i18n.t('attempts'), i18n.t('streak')];
+      const labelEl = item.querySelector('div:last-child');
+      if (labelEl && labels[i]) labelEl.textContent = labels[i];
+    });
+
+    // Update decode sequence label
+    const decodeLabel = document.querySelector('.game-info > div:nth-child(2)');
+    if (decodeLabel) decodeLabel.textContent = i18n.t('decodeSequence');
+
+    // Update hints section
+    const hintText = document.querySelector('.hint-section .hint-text');
+    if (hintText) hintText.textContent = i18n.t('hints');
+
+    // Update scribble area
+    const scribbleSpan = document.querySelector('.scribble-header > span');
+    if (scribbleSpan) scribbleSpan.textContent = i18n.t('scribbleHeader');
+
+    const clearCanvasBtn = state.dom.clearCanvasBtn;
+    if (clearCanvasBtn) clearCanvasBtn.textContent = i18n.t('clearCanvas');
+
+    // Update input label
+    const inputLabel = document.querySelector('.input-group > label');
+    if (inputLabel) inputLabel.textContent = i18n.t('enterGuess');
+
+    // Update game control buttons
+    state.dom.submitBtn.textContent = i18n.t('submitGuess');
+    state.dom.newGameBtn.textContent = i18n.t('newGame');
+    state.dom.clearBtn.textContent = i18n.t('clear');
+
+    // Update hint button
+    const hintCost = state.dom.hintCost.textContent;
+    state.dom.hintBtn.innerHTML = `${i18n.t('hint')} (<span id="hintCost">${hintCost}</span>◆)`;
+
+    // Sidebar labels
+    const thisSessionEl = document.querySelector('.session-card-title');
+    if (thisSessionEl) thisSessionEl.textContent = i18n.t('thisSession');
+
+    // Update session stats labels
+    document.querySelectorAll('.session-row').forEach((row) => {
+      const span = row.querySelector('span:first-child');
+      if (span) {
+        const text = span.textContent.trim();
+        if (text === 'Best round' || text === 'Meilleure manche') span.textContent = i18n.t('bestRound');
+        if (text === 'Total correct' || text === 'Total correct') span.textContent = i18n.t('totalCorrect');
+        if (text === 'Achievements' || text === 'Réalisations') span.textContent = i18n.t('achievements');
+      }
+    });
+
+    const refGuideEl = document.querySelector('.alphabet-reference strong');
+    if (refGuideEl) refGuideEl.textContent = i18n.t('referenceGuide');
+
+    // Update modal titles
+    document.querySelectorAll('.modal-header h2').forEach((el) => {
+      const modal = el.closest('.modal-overlay');
+      if (modal?.id === 'rulesModal') el.textContent = i18n.t('howToPlay');
+      if (modal?.id === 'storeModal') el.textContent = i18n.t('store');
+      if (modal?.id === 'achievementsModal') el.textContent = i18n.t('achievements');
+      if (modal?.id === 'settingsModal') el.textContent = i18n.t('settings');
+      if (modal?.id === 'aboutModal') el.textContent = i18n.t('about');
+    });
+
+    // Update settings modal labels
+    document.querySelectorAll('.settings-row').forEach((row) => {
+      const span = row.querySelector('span:first-child');
+      if (span) {
+        const text = span.textContent.trim();
+        if (text === 'Sound effects' || text === 'Effets sonores') span.textContent = i18n.t('soundEffects');
+        if (text === 'Ink theme' || text === 'Thème d\'encre') span.textContent = i18n.t('inkTheme');
+        if (text === 'Ads' || text === 'Publicités') span.textContent = i18n.t('ads');
+        if (text === 'Cloud Save' || text === 'Sauvegarde cloud') span.textContent = i18n.t('cloudSave');
+        if (text === 'App version' || text === 'Version de l\'application') span.textContent = i18n.t('appVersion');
+        if (text === 'Language' || text === 'Langue') span.textContent = i18n.t('language');
+        if (text === 'Theme' || text === 'Thème') span.textContent = i18n.t('theme');
+      }
+    });
+
+    // Update buttons
+    const resetBtn = state.dom.resetProgressBtn;
+    if (resetBtn) resetBtn.textContent = i18n.t('resetProgress');
+
+    // Update privacy policy links
+    document.querySelectorAll('.footer-link').forEach((link) => {
+      if (link.textContent.includes('Privacy') || link.textContent.includes('Politique')) {
+        link.textContent = i18n.t('privacyPolicy');
+      }
+    });
+
+    // Update menu translations
+    updateMenuTranslations();
+
+    // Re-render some parts that have dynamic text
+    renderAlphabetGrid();
   }
 
   function renderAlphabetGrid() {
@@ -750,6 +989,7 @@
   function applySettingsToUi() {
     state.dom.audioToggleCheckbox.checked = state.profile.settings.audioEnabled;
     state.dom.inkThemeSelect.value = state.profile.settings.inkTheme;
+    state.dom.cloudSaveToggle.checked = state.profile.settings.cloudSaveEnabled || false;
     state.dom.audioToggleBtn.textContent = state.profile.settings.audioEnabled ? '\u{1F50A}' : '\u{1F507}';
     state.dom.audioToggleBtn.classList.toggle('muted', !state.profile.settings.audioEnabled);
     document.body.classList.remove('theme-default', 'theme-neon', 'theme-gold');
@@ -788,6 +1028,154 @@
   }
 
   // ===========================================================================
+  // Game Menu
+  // ===========================================================================
+  function showLanguageScreen() {
+    state.dom.languageScreen.classList.remove('hidden');
+  }
+
+  function hideLanguageScreen() {
+    state.dom.languageScreen.classList.add('hidden');
+  }
+
+  function showMenu() {
+    state.dom.gameMenu.classList.remove('hidden');
+  }
+
+  function hideMenu() {
+    state.dom.gameMenu.classList.add('hidden');
+  }
+
+  function selectLanguageAndContinue(lang) {
+    window.I18n.setLanguage(lang);
+    state.dom.languageSelect.value = lang;
+    updateUILanguage();
+    hideLanguageScreen();
+    showMenu();
+  }
+
+  function selectDifficulty(difficulty) {
+    state.difficulty = difficulty;
+    document.querySelectorAll('.difficulty-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.difficulty === difficulty);
+    });
+  }
+
+  function startGame() {
+    hideMenu();
+    state.mode = 'casual';
+    state.run.round = 1;
+    state.run.streak = 0;
+    state.run.isActive = true;
+    updateStatsDisplay();
+    startNewRound();
+  }
+
+  async function startDailyChallenge() {
+    hideMenu();
+    state.dom.loadingOverlay.hidden = false;
+    state.dom.loadingText.textContent = window.I18n.t('loading') + ' Daily Challenge';
+
+    try {
+      const language = window.I18n.getLanguage();
+      console.log('Fetching daily challenge for language:', language);
+
+      const word = await SupabaseClient.getDailyChallenge(language);
+      console.log('Daily word received:', word);
+
+      if (!word) {
+        throw new Error(`No daily challenge word found for ${language}. Did you add it to the database?`);
+      }
+
+      state.mode = 'daily';
+      state.run.round = 1;
+      state.run.streak = 0;
+      state.run.isActive = true;
+      state.run.dailyWord = word;
+
+      updateStatsDisplay();
+      startDailyRound();
+    } catch (err) {
+      console.error('Daily challenge error:', err.message || err);
+      showToast('Daily: ' + (err.message || 'Error loading challenge'));
+      state.dom.loadingOverlay.hidden = true;
+      showMenu();
+    }
+  }
+
+  function startDailyRound() {
+    // Override normal word selection with fixed daily word
+    state.run.currentWord = state.run.dailyWord;
+    const numbers = wordToNumbers(state.run.currentWord);
+    state.run.currentNumbers = numbers.join('-');
+    state.run.scrambledSequence = scrambleNumbers(numbers);
+    state.run.attemptsThisRound = 0;
+    state.run.roundStartTime = Date.now();
+
+    const ambiguousMatches = checkForAmbiguity(state.run.scrambledSequence);
+    state.run.roundIsAmbiguous = ambiguousMatches.length > 1;
+    renderAmbiguity(ambiguousMatches);
+
+    const i18n = window.I18n;
+    state.dom.challengeNumbers.textContent = state.run.scrambledSequence;
+    state.dom.wordLengthHint.textContent = i18n.t('wordLength').replace('?', state.run.currentWord.length);
+    state.dom.difficultyHint.textContent = `Daily Challenge`;
+    state.dom.currentRound.textContent = '🎯';
+    state.dom.streakValue.textContent = '—';
+
+    createLetterBoxes(state.run.currentWord.length);
+
+    state.dom.resultText.textContent = i18n.t('makeGuess');
+    state.dom.result.className = 'result empty';
+    state.dom.validityIndicator.style.display = 'none';
+    state.dom.hintBtn.disabled = true;
+    state.dom.newGameBtn.hidden = false;
+    state.dom.clearBtn.hidden = false;
+    clearInput();
+    state.dom.loadingOverlay.hidden = true;
+  }
+
+  function getTierForRound(round) {
+    const baseTiers = CONSTANTS.DIFFICULTY_TIERS;
+
+    if (state.difficulty === 'easy') {
+      const easyTiers = baseTiers.slice(0, 10);
+      return easyTiers[Math.min(round - 1, easyTiers.length - 1)];
+    } else if (state.difficulty === 'hard') {
+      const hardTiers = baseTiers.slice(2);
+      return hardTiers[Math.min(round - 1, hardTiers.length - 1)];
+    } else {
+      return baseTiers[Math.min(round - 1, baseTiers.length - 1)];
+    }
+  }
+
+  function updateMenuTranslations() {
+    const i18n = window.I18n;
+    const menuContent = document.querySelector('.menu-content h3');
+    if (menuContent) menuContent.textContent = i18n.t('selectDifficulty');
+
+    const playBtn = state.dom.playBtn;
+    if (playBtn) playBtn.textContent = i18n.t('play');
+
+    document.querySelectorAll('.difficulty-btn').forEach((btn) => {
+      const difficulty = btn.dataset.difficulty;
+      const nameEl = btn.querySelector('.difficulty-name');
+      const descEl = btn.querySelector('.difficulty-desc');
+
+      if (difficulty === 'easy') {
+        if (nameEl) nameEl.textContent = i18n.t('easy');
+        if (descEl) descEl.textContent = i18n.t('easyDesc');
+      } else if (difficulty === 'medium') {
+        if (nameEl) nameEl.textContent = i18n.t('medium');
+        if (descEl) descEl.textContent = i18n.t('mediumDesc');
+      } else if (difficulty === 'hard') {
+        if (nameEl) nameEl.textContent = i18n.t('hard');
+        if (descEl) descEl.textContent = i18n.t('hardDesc');
+      }
+    });
+  }
+
+  // ===========================================================================
   // Wiring
   // ===========================================================================
   function wireEvents() {
@@ -796,6 +1184,21 @@
     state.dom.clearBtn.addEventListener('click', clearInput);
     state.dom.hintBtn.addEventListener('click', useHint);
     state.dom.clearCanvasBtn.addEventListener('click', clearCanvas);
+
+    // Language screen buttons
+    state.dom.enLangBtn.addEventListener('click', () => selectLanguageAndContinue('en'));
+    state.dom.frLangBtn.addEventListener('click', () => selectLanguageAndContinue('fr'));
+
+    // Menu buttons
+    state.dom.easyBtn.addEventListener('click', () => selectDifficulty('easy'));
+    state.dom.mediumBtn.addEventListener('click', () => selectDifficulty('medium'));
+    state.dom.hardBtn.addEventListener('click', () => selectDifficulty('hard'));
+    state.dom.playBtn.addEventListener('click', startGame);
+    state.dom.dailyChallengeBtn.addEventListener('click', startDailyChallenge);
+    state.dom.menuSettingsBtn.addEventListener('click', () => {
+      hideMenu();
+      openModal('settingsModal');
+    });
 
     state.dom.rulesBtn.addEventListener('click', () => openModal('rulesModal'));
     state.dom.achievementsBtn.addEventListener('click', () => openModal('achievementsModal'));
@@ -823,6 +1226,52 @@
       applySettingsToUi();
       persistProfile();
     });
+
+    state.dom.cloudSaveToggle.addEventListener('change', async () => {
+      const enabled = state.dom.cloudSaveToggle.checked;
+      state.profile.settings.cloudSaveEnabled = enabled;
+      if (enabled && typeof window.SupabaseClient !== 'undefined') {
+        try {
+          await window.SupabaseClient.signInAnonymously();
+          // Sync current profile to cloud
+          await persistProfile();
+          showToast('Cloud save enabled!');
+        } catch (err) {
+          console.error('Cloud sign-in failed:', err);
+          state.dom.cloudSaveToggle.checked = false;
+          state.profile.settings.cloudSaveEnabled = false;
+          showToast('Cloud save failed. Try again later.');
+        }
+      } else {
+        persistProfile();
+      }
+    });
+
+    // Language and theme toggle in settings modal
+    state.dom.languageSelect.addEventListener('change', () => {
+      window.I18n.setLanguage(state.dom.languageSelect.value);
+      updateUILanguage();
+    });
+    state.dom.themeSelect.addEventListener('change', () => {
+      window.I18n.setTheme(state.dom.themeSelect.value);
+    });
+
+    // Language and theme toggle buttons in top bar
+    state.dom.languageToggleBtn.addEventListener('click', () => {
+      const current = window.I18n.getLanguage();
+      const next = current === 'en' ? 'fr' : 'en';
+      window.I18n.setLanguage(next);
+      state.dom.languageSelect.value = next;
+      updateUILanguage();
+    });
+    state.dom.themeToggleBtn.addEventListener('click', () => {
+      const current = window.I18n.getTheme();
+      const next = current === 'light' ? 'dark' : 'light';
+      window.I18n.setTheme(next);
+      state.dom.themeSelect.value = next;
+      updateUILanguage();
+    });
+
     state.dom.resetProgressBtn.addEventListener('click', resetAllProgress);
 
     document.addEventListener('keydown', (e) => {
@@ -868,13 +1317,14 @@
     await WORDSDB.init();
 
     state.dom.loadingOverlay.hidden = true;
-    startNewRound();
+    updateUILanguage();
+    showLanguageScreen();
+    selectDifficulty('medium');
     ANALYTICS.track('game_start', { version, wordCount: WORDSDB.wordCount() });
 
     if (!state.profile.hasSeenRules) {
       state.profile.hasSeenRules = true;
       persistProfile();
-      openModal('rulesModal');
     }
   }
 

@@ -32,28 +32,31 @@
     if (!db) throw new Error('WORDSDB not initialized — call and await WORDSDB.init() first');
   }
 
-  function isValidWord(word) {
+  function isValidWord(word, lang) {
     ensureReady();
     const upper = String(word || '').toUpperCase();
-    const stmt = db.prepare('SELECT 1 FROM words WHERE word = ? LIMIT 1');
-    stmt.bind([upper]);
+    const language = lang || (typeof root.I18n !== 'undefined' ? root.I18n.getLanguage() : 'en');
+    const stmt = db.prepare('SELECT 1 FROM words WHERE word = ? AND lang = ? LIMIT 1');
+    stmt.bind([upper, language]);
     const found = stmt.step();
     stmt.free();
     return found;
   }
 
-  function randomWordForLength(length) {
+  function randomWordForLength(length, lang) {
     ensureReady();
-    const stmt = db.prepare('SELECT word FROM words WHERE length = ? ORDER BY RANDOM() LIMIT 1');
-    stmt.bind([length]);
+    const language = lang || (typeof root.I18n !== 'undefined' ? root.I18n.getLanguage() : 'en');
+    const stmt = db.prepare('SELECT word FROM words WHERE length = ? AND lang = ? ORDER BY RANDOM() LIMIT 1');
+    stmt.bind([length, language]);
     let word = null;
     if (stmt.step()) word = stmt.getAsObject().word;
     stmt.free();
     return word;
   }
 
-  function randomWordForRound(round) {
+  function randomWordForRound(round, lang) {
     ensureReady();
+    const language = lang || (typeof root.I18n !== 'undefined' ? root.I18n.getLanguage() : 'en');
     const tier = root.CONSTANTS.tierForRound(round);
     const lengths = [...tier.lengths];
     for (let i = lengths.length - 1; i > 0; i--) {
@@ -61,11 +64,12 @@
       [lengths[i], lengths[j]] = [lengths[j], lengths[i]];
     }
     for (const length of lengths) {
-      const word = randomWordForLength(length);
+      const word = randomWordForLength(length, language);
       if (word) return word;
     }
     // Fallback if the requested tier's lengths have no matching words in the DB.
-    const stmt = db.prepare('SELECT word FROM words ORDER BY RANDOM() LIMIT 1');
+    const stmt = db.prepare('SELECT word FROM words WHERE lang = ? ORDER BY RANDOM() LIMIT 1');
+    stmt.bind([language]);
     let word = null;
     if (stmt.step()) word = stmt.getAsObject().word;
     stmt.free();
@@ -76,13 +80,14 @@
    * Replace/augment the word database at runtime with a licensed/official
    * list. Pass an array of words (any case, length >= 4, letters only).
    */
-  function loadCustomList(words) {
+  function loadCustomList(words, lang) {
     ensureReady();
+    const language = lang || 'en';
     db.run('BEGIN TRANSACTION');
-    const insert = db.prepare('INSERT OR REPLACE INTO words (word, length) VALUES (?, ?)');
+    const insert = db.prepare('INSERT OR REPLACE INTO words (word, length, lang) VALUES (?, ?, ?)');
     words.forEach((raw) => {
       const word = String(raw).toUpperCase().trim();
-      if (/^[A-Z]{4,}$/.test(word)) insert.run([word, word.length]);
+      if (/^[A-Z]{4,}$/.test(word)) insert.run([word, word.length, language]);
     });
     insert.free();
     db.run('COMMIT');

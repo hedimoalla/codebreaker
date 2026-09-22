@@ -3,12 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;">
     <title>CodeBreaker - Word Puzzle Game</title>
     <link rel="icon" href="assets/icon.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Language Selection Screen -->
+    <div class="game-menu language-screen" id="languageScreen">
+        <div class="menu-content">
+            <h2>CodeBreaker</h2>
+            <p class="menu-subtitle">Crack number sequences to reveal hidden words</p>
+
+            <div class="menu-section" style="margin-top: 40px;">
+                <h3>Select Language</h3>
+                <div class="language-options">
+                    <button class="language-btn" id="enLangBtn" data-language="en">
+                        <span class="language-flag">🇬🇧</span>
+                        <span class="language-name">English</span>
+                    </button>
+                    <button class="language-btn" id="frLangBtn" data-language="fr">
+                        <span class="language-flag">🇫🇷</span>
+                        <span class="language-name">Français</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-footer">
+                <a href="privacy.html" class="menu-link">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Menu -->
+    <div class="game-menu main-menu hidden" id="gameMenu">
+        <div class="menu-content menu-scrollable">
+            <h2>CodeBreaker</h2>
+            <p class="menu-subtitle">Crack number sequences to reveal hidden words</p>
+
+            <div class="menu-section">
+                <h3 id="rulesTitle">How to Play</h3>
+                <div class="rules-content">
+                    <p><strong>1. The cipher:</strong> Every letter has a number: A=1, B=2, ... Z=26</p>
+                    <p><strong>2. The challenge:</strong> Unscramble the shuffled digits into a real word.</p>
+                    <p><strong>3. Red cumulative-sum boxes:</strong> Running totals of letter-values added left to right. Use them to verify your splits.</p>
+                    <p><strong>4. Multiple interpretations:</strong> Sometimes digits can form different words. You'll see warnings.</p>
+                    <p><strong>5. Scribble area:</strong> Scratch space for your notes.</p>
+                    <p><strong>6. Hints:</strong> Spend Shards to reveal letters. Shards earned by solving puzzles.</p>
+                    <p><strong>7. Difficulty:</strong> Words get longer and checkpoints fewer as you progress.</p>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <h3 id="dailyChallengeTitle">Daily Challenge</h3>
+                <p style="font-size: 0.9em; color: #888; margin: 0 0 10px 0;">One new 5-letter word every 24 hours</p>
+                <button class="menu-btn play-btn" id="dailyChallengeBtn" style="width: 100%; margin-bottom: 10px;">🎯 Play Daily</button>
+                <div id="dailyStats" style="display: none; font-size: 0.85em; color: #666; text-align: center;">
+                  <div>Current Streak: <strong id="dailyStreakValue">0</strong></div>
+                  <div>Best Round: <strong id="dailyBestRoundValue">0</strong></div>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <h3 id="selectDifficultyTitle">Select Difficulty</h3>
+                <div class="difficulty-options">
+                    <button class="difficulty-btn" id="easyBtn" data-difficulty="easy">
+                        <span class="difficulty-icon">🌱</span>
+                        <div>
+                            <span class="difficulty-name">Easy</span>
+                            <span class="difficulty-desc">Short words, gentle progression</span>
+                        </div>
+                    </button>
+                    <button class="difficulty-btn active" id="mediumBtn" data-difficulty="medium">
+                        <span class="difficulty-icon">⚔️</span>
+                        <div>
+                            <span class="difficulty-name">Medium</span>
+                            <span class="difficulty-desc">Balanced challenge</span>
+                        </div>
+                    </button>
+                    <button class="difficulty-btn" id="hardBtn" data-difficulty="hard">
+                        <span class="difficulty-icon">🔥</span>
+                        <div>
+                            <span class="difficulty-name">Hard</span>
+                            <span class="difficulty-desc">Long words, fast progression</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-actions">
+                <button class="menu-btn play-btn" id="playBtn">Play</button>
+                <button class="menu-btn settings-btn" id="menuSettingsBtn">⚙️ Settings</button>
+            </div>
+
+            <div class="menu-footer">
+                <a href="privacy.html" class="menu-link">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="main-game-area">
             <div class="top-bar">
@@ -21,11 +114,13 @@
                         <span class="shards-icon">&#9670;</span>
                         <span id="shardsValue">0</span>
                     </div>
-                    <button class="icon-btn" id="rulesBtn" title="How to Play">&#10067;</button>
-                    <button class="icon-btn" id="audioToggleBtn" title="Toggle sound">&#128266;</button>
-                    <button class="icon-btn" id="achievementsBtn" title="Achievements">&#127942;</button>
-                    <button class="icon-btn" id="storeBtn" title="Store">&#128722;</button>
-                    <button class="icon-btn" id="settingsBtn" title="Settings">&#9881;</button>
+                    <button class="icon-btn" id="rulesBtn" title="How to Play">?</button>
+                    <button class="icon-btn" id="audioToggleBtn" title="Toggle sound">🔊</button>
+                    <button class="icon-btn" id="languageToggleBtn" title="EN/FR">🌐</button>
+                    <button class="icon-btn" id="themeToggleBtn" title="Light/Dark">🌙</button>
+                    <button class="icon-btn" id="achievementsBtn" title="Achievements">🏆</button>
+                    <button class="icon-btn" id="storeBtn" title="Store">🎁</button>
+                    <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
                 </div>
             </div>
 
@@ -204,25 +299,43 @@
                 <button class="modal-close" data-close-modal="settingsModal">&times;</button>
             </div>
             <div class="modal-body">
-                <label class="settings-row">
-                    <span>Sound effects</span>
-                    <input type="checkbox" id="audioToggleCheckbox" checked>
-                </label>
                 <div class="settings-row">
-                    <span>Ink theme</span>
-                    <select id="inkThemeSelect">
-                        <option value="default">Default (Purple)</option>
-                        <option value="neon">Neon Green</option>
-                        <option value="gold">Gold</option>
+                    <span id="settingsLanguageLabel">Language</span>
+                    <select id="languageSelect">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
                     </select>
                 </div>
                 <div class="settings-row">
-                    <span>Ads</span>
-                    <span id="adsStatusLabel">Enabled</span>
+                    <span id="settingsThemeLabel">Theme</span>
+                    <select id="themeSelect">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                <label class="settings-row">
+                    <span id="soundEffectsLabel">Sound effects</span>
+                    <input type="checkbox" id="audioToggleCheckbox" checked>
+                </label>
+                <div class="settings-row">
+                    <span id="inkThemeLabel">Ink theme</span>
+                    <select id="inkThemeSelect">
+                        <option value="default" id="themeDefault">Default (Purple)</option>
+                        <option value="neon" id="themeNeon">Neon Green</option>
+                        <option value="gold" id="themeGold">Gold</option>
+                    </select>
                 </div>
                 <div class="settings-row">
-                    <span>App version</span>
-                    <span id="appVersionLabel">1.0.0 (web)</span>
+                    <span id="adsLabel">Ads</span>
+                    <span id="adsStatusLabel">Enabled</span>
+                </div>
+                <label class="settings-row">
+                    <span id="cloudSaveLabel">Cloud Save</span>
+                    <input type="checkbox" id="cloudSaveToggle">
+                </label>
+                <div class="settings-row">
+                    <span id="appVersionLabel">App version</span>
+                    <span id="appVersionValue">1.0.0 (web)</span>
                 </div>
                 <button class="reset-btn" id="resetProgressBtn" style="width:100%; margin-top:15px;">Reset All Progress</button>
                 <a href="privacy.html" class="footer-link" style="display:block; text-align:center; margin-top:15px;">Privacy Policy</a>
@@ -259,9 +372,11 @@
     </div>
 
     <script src="vendor/sql-js/sql-wasm.js"></script>
+    <script src="i18n.js"></script>
     <script src="analytics.js"></script>
     <script src="constants.js"></script>
     <script src="words-db.js"></script>
+    <script src="supabase-client.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
