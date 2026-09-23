@@ -1,5 +1,5 @@
 /**
- * game.js — CodeBreaker game logic: cipher mechanics, canvas, audio,
+ * game.js — CodeBreaker game logic: cipher mechanics, scribble notes, audio,
  * persistence, monetization/achievements, and UI wiring.
  *
  * Depends on globals from (loaded before this file in index.html):
@@ -217,7 +217,8 @@
       settings: { audioEnabled: true, inkTheme: 'default', adsFree: false, showAlphabet: true },
       dailyStreak: 0,
       dailyBestRound: 0,
-      lastDailyPlayDate: null
+      lastDailyPlayDate: null,
+      dailyResults: {}
     };
   }
 
@@ -292,7 +293,6 @@
     },
     difficulty: 'medium',
     dom: {},
-    canvas: { ctx: null, drawing: false }
   };
 
   function q(id) { return document.getElementById(id); }
@@ -301,8 +301,8 @@
     const ids = [
       'currentRound', 'correctGuesses', 'totalAttempts', 'streakValue',
       'challengeNumbers', 'wordLengthHint', 'difficultyHint',
-      'scribbleCanvas', 'clearCanvasBtn', 'ambiguityWarning', 'parsingOptions',
-      'letterContainer', 'submitBtn', 'hintBtn', 'hintCost', 'newGameBtn', 'clearBtn',
+      'scribblePad', 'clearCanvasBtn', 'ambiguityWarning', 'parsingOptions',
+      'letterContainer', 'submitBtn', 'nextWordBtn', 'hintBtn', 'hintCost', 'newGameBtn', 'clearBtn',
       'result', 'resultText', 'validityIndicator', 'validityText',
       'shardsValue', 'audioToggleBtn', 'achievementsBtn', 'storeBtn', 'settingsBtn', 'rulesBtn', 'rulesModal',
       'languageToggleBtn', 'themeToggleBtn', 'alphabetToggleBtn', 'alphabetReference',
@@ -312,7 +312,7 @@
       'appVersionLabel', 'aboutVersionLabel', 'aboutModal', 'resetProgressBtn',
       'toast', 'loadingOverlay', 'loadingText', 'footerVersion',
       'languageSelect', 'themeSelect',
-      'languageScreen', 'enLangBtn', 'frLangBtn',
+      'languageScreen', 'enLangBtn', 'frLangBtn', 'langScreenMenuBtn',
       'gameMenu', 'easyBtn', 'mediumBtn', 'hardBtn', 'playBtn', 'menuSettingsBtn',
       'dailyChallengeBtn', 'dailyStats', 'dailyStreakValue', 'dailyBestRoundValue'
     ];
@@ -332,66 +332,14 @@
   }
 
   // ===========================================================================
-  // Canvas (scribble area)
+  // Scribble area (typed notes)
   // ===========================================================================
-  function initCanvas() {
-    const canvas = state.dom.scribbleCanvas;
-    const ctx = canvas.getContext('2d');
-    state.canvas.ctx = ctx;
-
-    function resize() {
-      const rect = canvas.getBoundingClientRect();
-      const prevData = canvas.width ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      applyInkTheme();
-      if (prevData) ctx.putImageData(prevData, 0, 0);
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    const getPos = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    };
-
-    canvas.addEventListener('mousedown', (e) => {
-      state.canvas.drawing = true;
-      const { x, y } = getPos(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    });
-    canvas.addEventListener('mousemove', (e) => {
-      if (!state.canvas.drawing) return;
-      const { x, y } = getPos(e);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    });
-    ['mouseup', 'mouseout'].forEach((evt) => canvas.addEventListener(evt, () => { state.canvas.drawing = false; }));
-
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); canvas.dispatchEvent(toMouseEvent('mousedown', e)); }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); canvas.dispatchEvent(toMouseEvent('mousemove', e)); }, { passive: false });
-    canvas.addEventListener('touchend', (e) => { e.preventDefault(); state.canvas.drawing = false; }, { passive: false });
-
-    function toMouseEvent(type, touchEvent) {
-      const touch = touchEvent.touches[0] || touchEvent.changedTouches[0];
-      return new MouseEvent(type, { clientX: touch.clientX, clientY: touch.clientY });
-    }
-  }
-
-  function clearCanvas() {
-    const canvas = state.dom.scribbleCanvas;
-    const ctx = state.canvas.ctx;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function clearScribble() {
+    state.dom.scribblePad.value = '';
   }
 
   function applyInkTheme() {
-    const ctx = state.canvas.ctx;
-    if (!ctx) return;
-    ctx.strokeStyle = THEME_COLORS[state.profile.settings.inkTheme] || THEME_COLORS.default;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    state.dom.scribblePad.style.color = THEME_COLORS[state.profile.settings.inkTheme] || THEME_COLORS.default;
   }
 
   // ===========================================================================
@@ -476,6 +424,7 @@
   }
 
   function useHint() {
+    if (!state.run.isActive) return;
     const cost = CONFIG.hintCostShards;
     if (state.profile.shards < cost) {
       showToast(`Not enough shards — hints cost ${cost}◆`);
@@ -503,7 +452,13 @@
   // ===========================================================================
   // Round flow
   // ===========================================================================
+  function showSubmitButton() {
+    state.dom.submitBtn.hidden = false;
+    state.dom.nextWordBtn.hidden = true;
+  }
+
   function startNewRound() {
+    showSubmitButton();
     const tier = getTierForRound(state.run.round);
     state.run.currentWord = WORDSDB.randomWordForTier(tier);
     const numbers = wordToNumbers(state.run.currentWord);
@@ -556,7 +511,16 @@
     AudioFX.click();
   }
 
+  function goToNextWord() {
+    clearScribble();
+    state.dom.validityIndicator.style.display = 'none';
+    state.run.round += 1;
+    state.run.isActive = true;
+    startNewRound();
+  }
+
   function submitGuess() {
+    if (!state.dom.nextWordBtn.hidden) return goToNextWord();
     if (!state.run.isActive) return;
     const guess = getGuessFromBoxes();
 
@@ -588,7 +552,6 @@
     const isValidWordGuess = WORDSDB.isValidWord(guess);
     const isCorrect = guess === state.run.currentWord;
 
-    clearCanvas();
 
     const guessNumbers = wordToNumbers(guess);
     state.dom.resultText.textContent = guessNumbers.join('-');
@@ -645,60 +608,93 @@
     state.run.isActive = false;
 
     if (state.mode === 'daily') {
-      // Daily challenge complete - show stats instead of next round
-      setTimeout(() => showDailyChallengeComplete(solveMs, shardsEarned, indicator), 2200);
-    } else {
-      // Regular mode - continue to next round
+      const dailyResult = recordDailyResult(true, solveMs);
       setTimeout(() => {
-        state.run.round += 1;
-        state.run.isActive = true;
-        startNewRound();
         indicator.style.display = 'none';
+        showDailyResult(dailyResult, shardsEarned);
       }, 2200);
+    } else {
+      state.dom.submitBtn.hidden = true;
+      state.dom.nextWordBtn.hidden = false;
     }
   }
 
-  function showDailyChallengeComplete(solveMs, shardsEarned, indicator) {
-    const i18n = window.I18n;
-    indicator.style.display = 'none';
+  function getYesterdayDate() {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
 
-    // Update daily stats
-    state.profile.dailyStreak = (state.profile.lastDailyPlayDate === getCurrentDate())
-      ? state.profile.dailyStreak + 1
-      : 1;
-    state.profile.lastDailyPlayDate = getCurrentDate();
+  function todaysDailyResult(lang) {
+    const result = state.profile.dailyResults?.[lang];
+    return result && result.date === getCurrentDate() ? result : null;
+  }
+
+  function recordDailyResult(solved, solveMs) {
+    const today = getCurrentDate();
+    const lang = window.I18n.getLanguage();
+    const result = {
+      date: today,
+      word: state.run.dailyWord,
+      solved,
+      attempts: state.run.attemptsThisRound,
+      solveMs: solved ? solveMs : null
+    };
+    state.profile.dailyResults = { ...state.profile.dailyResults, [lang]: result };
+
+    // The streak counts days, so a second language on the same day leaves it unchanged.
+    if (!solved) {
+      state.profile.dailyStreak = 0;
+    } else if (state.profile.lastDailyPlayDate !== today) {
+      state.profile.dailyStreak = state.profile.lastDailyPlayDate === getYesterdayDate()
+        ? (state.profile.dailyStreak || 0) + 1
+        : 1;
+    }
+    state.profile.lastDailyPlayDate = today;
     state.profile.dailyBestRound = Math.max(state.profile.dailyBestRound || 0, 1);
 
     persistProfile();
+    renderDailyMenuState();
+    return result;
+  }
 
-    // Show completion modal
+  function showDailyResult(dailyResult, shardsEarned) {
+    const i18n = window.I18n;
+    const heading = dailyResult.solved ? i18n.t('dailyComplete') : i18n.t('dailyMissed');
+    const timeLine = dailyResult.solved
+      ? `<div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">${i18n.t('dailyTime')}: ${(dailyResult.solveMs / 1000).toFixed(1)}s</div>`
+      : '';
+    const shardsLine = shardsEarned
+      ? `<div style="color: #667eea; font-size: 1.1em; font-weight: bold;">+${shardsEarned}◆</div>`
+      : '';
+
     const modal = state.dom.result;
     modal.innerHTML = `
       <div style="text-align: center; padding: 40px 20px;">
-        <h2 style="color: #667eea; font-size: 2em; margin-bottom: 20px;">🎯 Daily Challenge Complete!</h2>
+        <h2 style="color: #667eea; font-size: 2em; margin-bottom: 20px;">${heading}</h2>
         <div style="background: rgba(102, 126, 234, 0.1); border-radius: 12px; padding: 30px; margin-bottom: 20px;">
           <div style="margin-bottom: 20px;">
-            <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">Word: ${state.run.currentWord}</div>
-            <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">Time: ${(solveMs / 1000).toFixed(1)}s</div>
-            <div style="color: #667eea; font-size: 1.1em; font-weight: bold;">+${shardsEarned}◆</div>
+            <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">${i18n.t('dailyWord')}: <strong>${dailyResult.word}</strong></div>
+            ${timeLine}
+            ${shardsLine}
           </div>
           <hr style="border: none; border-top: 1px solid rgba(102, 126, 234, 0.2); margin: 20px 0;">
           <div style="font-size: 0.95em;">
-            <div style="margin: 10px 0;">Current Streak: <strong>${state.profile.dailyStreak}</strong></div>
-            <div style="margin: 10px 0;">Attempts: <strong>${state.run.attemptsThisRound}</strong></div>
-            <div style="margin: 10px 0;">Total Shards: <strong>${state.profile.shards}</strong></div>
+            <div style="margin: 10px 0;">${i18n.t('dailyStreak')}: <strong>${state.profile.dailyStreak}</strong></div>
+            <div style="margin: 10px 0;">${i18n.t('attempts')}: <strong>${dailyResult.attempts}</strong></div>
+            <div style="margin: 10px 0;">${i18n.t('dailyComeBack')}</div>
           </div>
         </div>
-        <button id="dailyBackBtn" style="background: #667eea; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1em; cursor: pointer;">Back to Menu</button>
+        <button id="dailyBackBtn" style="background: #667eea; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1em; cursor: pointer;">${i18n.t('backToMenu')}</button>
       </div>
     `;
-    modal.className = 'result correct';
+    modal.className = dailyResult.solved ? 'result correct' : 'result incorrect';
 
     // Add click handler after DOM is updated
     setTimeout(() => {
       const backBtn = document.getElementById('dailyBackBtn');
       if (backBtn) {
-        backBtn.addEventListener('click', showMenu);
+        backBtn.addEventListener('click', () => showLanguageScreen({ allowBackToMenu: true }));
       }
     }, 0);
   }
@@ -720,6 +716,14 @@
     ANALYTICS.track('guess_incorrect', { round: state.run.round, guessedValidWord: true });
 
     state.run.isActive = false;
+    if (state.mode === 'daily') {
+      const dailyResult = recordDailyResult(false, null);
+      setTimeout(() => {
+        indicator.style.display = 'none';
+        showDailyResult(dailyResult, 0);
+      }, 3000);
+      return;
+    }
     setTimeout(() => {
       state.run.round += 1;
       state.run.isActive = true;
@@ -748,7 +752,7 @@
 
   function clearInput() {
     clearLetterBoxes();
-    clearCanvas();
+    clearScribble();
     state.dom.resultText.textContent = 'Make your guess to see the result!';
     state.dom.result.className = 'result empty';
     state.dom.validityIndicator.style.display = 'none';
@@ -776,6 +780,10 @@
     // Update all static labels
     document.documentElement.lang = i18n.getLanguage();
     document.title = i18n.t('pageTitle');
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      el.textContent = i18n.t(el.dataset.i18n);
+    });
+    renderDailyMenuState();
     state.dom.languageSelect.value = i18n.getLanguage();
     state.dom.themeSelect.value = i18n.getTheme();
 
@@ -813,6 +821,7 @@
     // Update scribble area
     const scribbleSpan = document.querySelector('.scribble-header > span');
     if (scribbleSpan) scribbleSpan.textContent = i18n.t('scribbleHeader');
+    state.dom.scribblePad.placeholder = i18n.t('scribblePlaceholder');
 
     const clearCanvasBtn = state.dom.clearCanvasBtn;
     if (clearCanvasBtn) clearCanvasBtn.textContent = i18n.t('clearCanvas');
@@ -823,6 +832,7 @@
 
     // Update game control buttons
     state.dom.submitBtn.textContent = i18n.t('submitGuess');
+    state.dom.nextWordBtn.textContent = i18n.t('nextWord');
     state.dom.newGameBtn.textContent = i18n.t('newGame');
     state.dom.clearBtn.textContent = i18n.t('clear');
 
@@ -1041,7 +1051,12 @@
   // ===========================================================================
   // Game Menu
   // ===========================================================================
-  function showLanguageScreen() {
+  function showLanguageScreen({ allowBackToMenu = false } = {}) {
+    state.dom.langScreenMenuBtn.hidden = !allowBackToMenu;
+    document.querySelectorAll('[data-daily-lang]').forEach((el) => {
+      const played = todaysDailyResult(el.dataset.dailyLang);
+      el.textContent = played ? `${played.solved ? '✅' : '❌'} ${played.word}` : '';
+    });
     state.dom.languageScreen.classList.remove('hidden');
   }
 
@@ -1050,7 +1065,19 @@
   }
 
   function showMenu() {
+    renderDailyMenuState();
     state.dom.gameMenu.classList.remove('hidden');
+  }
+
+  function renderDailyMenuState() {
+    const i18n = window.I18n;
+    const played = todaysDailyResult(i18n.getLanguage());
+    const btn = state.dom.dailyChallengeBtn;
+    btn.disabled = Boolean(played);
+    btn.textContent = played
+      ? `${played.solved ? '✅' : '❌'} ${i18n.t('dailyWord')}: ${played.word}`
+      : `🎯 ${i18n.t('playDaily')}`;
+    btn.title = played ? i18n.t('dailyComeBack') : '';
   }
 
   function hideMenu() {
@@ -1083,6 +1110,11 @@
   }
 
   async function startDailyChallenge() {
+    const played = todaysDailyResult(window.I18n.getLanguage());
+    if (played) {
+      showToast(`${window.I18n.t('dailyWord')}: ${played.word} — ${window.I18n.t('dailyComeBack')}`);
+      return;
+    }
     hideMenu();
     state.dom.loadingOverlay.hidden = false;
     state.dom.loadingText.textContent = window.I18n.t('loading') + ' Daily Challenge';
@@ -1115,6 +1147,7 @@
   }
 
   function startDailyRound() {
+    showSubmitButton();
     // Override normal word selection with fixed daily word
     state.run.currentWord = state.run.dailyWord;
     const numbers = wordToNumbers(state.run.currentWord);
@@ -1162,8 +1195,9 @@
 
   function updateMenuTranslations() {
     const i18n = window.I18n;
-    const menuContent = document.querySelector('.menu-content h3');
-    if (menuContent) menuContent.textContent = i18n.t('selectDifficulty');
+    document.getElementById('selectDifficultyTitle').textContent = i18n.t('selectDifficulty');
+    document.getElementById('selectLanguageTitle').textContent = i18n.t('selectLanguage');
+    state.dom.langScreenMenuBtn.textContent = i18n.t('backToMenu');
 
     const playBtn = state.dom.playBtn;
     if (playBtn) playBtn.textContent = i18n.t('play');
@@ -1191,10 +1225,11 @@
   // ===========================================================================
   function wireEvents() {
     state.dom.submitBtn.addEventListener('click', submitGuess);
+    state.dom.nextWordBtn.addEventListener('click', goToNextWord);
     state.dom.newGameBtn.addEventListener('click', newGame);
     state.dom.clearBtn.addEventListener('click', clearInput);
     state.dom.hintBtn.addEventListener('click', useHint);
-    state.dom.clearCanvasBtn.addEventListener('click', clearCanvas);
+    state.dom.clearCanvasBtn.addEventListener('click', clearScribble);
 
     // Language screen buttons
     state.dom.enLangBtn.addEventListener('click', () => selectLanguageAndContinue('en'));
@@ -1206,6 +1241,10 @@
     state.dom.hardBtn.addEventListener('click', () => selectDifficulty('hard'));
     state.dom.playBtn.addEventListener('click', startGame);
     state.dom.dailyChallengeBtn.addEventListener('click', startDailyChallenge);
+    state.dom.langScreenMenuBtn.addEventListener('click', () => {
+      hideLanguageScreen();
+      showMenu();
+    });
     state.dom.menuSettingsBtn.addEventListener('click', () => {
       hideMenu();
       openModal('settingsModal');
@@ -1287,7 +1326,7 @@
     state.dom.resetProgressBtn.addEventListener('click', resetAllProgress);
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.target.matches('.letter-box')) submitGuess();
+      if (e.key === 'Enter' && !e.target.matches('button, .letter-box, .scribble-pad')) submitGuess();
     });
 
     window.addEventListener('beforeunload', () => { Persistence.save(state.profile); });
@@ -1306,7 +1345,6 @@
     state.dom.hintCost.textContent = String(CONFIG.hintCostShards);
     renderAlphabetGrid();
     wireEvents();
-    initCanvas();
 
     const savedProfile = await Persistence.load();
     if (savedProfile) state.profile = Object.assign(defaultProfile(), savedProfile, { settings: Object.assign(defaultProfile().settings, savedProfile.settings || {}) });

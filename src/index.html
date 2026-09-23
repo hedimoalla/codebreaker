@@ -16,7 +16,7 @@
             <p class="menu-subtitle">Crack number sequences to reveal hidden words</p>
 
             <div class="menu-section" style="margin-top: 40px;">
-                <h3>Select Language</h3>
+                <h3 id="selectLanguageTitle">Select Language</h3>
                 <div class="language-options">
                     <button class="language-btn" id="enLangBtn" data-language="en">
                         <svg class="language-flag" viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -28,6 +28,7 @@
                             <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
                         </svg>
                         <span class="language-name">English</span>
+                        <span class="language-daily-status" data-daily-lang="en"></span>
                     </button>
                     <button class="language-btn" id="frLangBtn" data-language="fr">
                         <svg class="language-flag" viewBox="0 0 3 2" aria-hidden="true">
@@ -36,8 +37,10 @@
                             <rect x="2" width="1" height="2" fill="#CE1126"/>
                         </svg>
                         <span class="language-name">Français</span>
+                        <span class="language-daily-status" data-daily-lang="fr"></span>
                     </button>
                 </div>
+                <button class="menu-btn play-btn" id="langScreenMenuBtn" style="width: 100%; margin-top: 20px;" hidden>Back to Menu</button>
             </div>
 
             <div class="menu-footer">
@@ -55,13 +58,13 @@
             <div class="menu-section">
                 <h3 id="rulesTitle">How to Play</h3>
                 <div class="rules-content">
-                    <p><strong>1. The cipher:</strong> Every letter has a number: A=1, B=2, ... Z=26</p>
-                    <p><strong>2. The challenge:</strong> Unscramble the shuffled digits into a real word.</p>
-                    <p><strong>3. Red cumulative-sum boxes:</strong> Running totals of letter-values added left to right. Use them to verify your splits.</p>
-                    <p><strong>4. Multiple interpretations:</strong> Sometimes digits can form different words. You'll see warnings.</p>
-                    <p><strong>5. Scribble area:</strong> Scratch space for your notes.</p>
-                    <p><strong>6. Hints:</strong> Spend Shards to reveal letters. Shards earned by solving puzzles.</p>
-                    <p><strong>7. Difficulty:</strong> Words get longer and checkpoints fewer as you progress.</p>
+                    <p><strong data-i18n="rule1">1. The cipher:</strong> <span data-i18n="rule1Desc">Every letter has a number: A=1, B=2, ... Z=26</span></p>
+                    <p><strong data-i18n="rule2">2. The challenge:</strong> <span data-i18n="rule2Desc">Unscramble the shuffled digits into a real word.</span></p>
+                    <p><strong data-i18n="rule3">3. Red cumulative-sum boxes:</strong> <span data-i18n="rule3Desc">Running totals of letter-values added left to right. Use them to verify your splits.</span></p>
+                    <p><strong data-i18n="rule4">4. Multiple interpretations:</strong> <span data-i18n="rule4Desc">Sometimes digits can form different words. You'll see warnings.</span></p>
+                    <p><strong data-i18n="rule5">5. Scribble area:</strong> <span data-i18n="rule5Desc">Scratch space for your notes.</span></p>
+                    <p><strong data-i18n="rule6">6. Hints:</strong> <span data-i18n="rule6Desc">Spend Shards to reveal letters. Shards earned by solving puzzles.</span></p>
+                    <p><strong data-i18n="rule7">7. Difficulty:</strong> <span data-i18n="rule7Desc">Words get longer and checkpoints fewer as you progress.</span></p>
                 </div>
             </div>
 
@@ -180,7 +183,8 @@
                     <span>&#128221; Scribble Area - Draft your solution</span>
                     <button class="scribble-btn" id="clearCanvasBtn">Clear</button>
                 </div>
-                <canvas class="scribble-canvas" id="scribbleCanvas"></canvas>
+                <textarea class="scribble-pad" id="scribblePad" spellcheck="false" autocomplete="off"
+                    placeholder="Type your notes here, e.g. 3 1 11 5 = C A K E"></textarea>
             </div>
 
             <div class="ambiguity-warning" id="ambiguityWarning">
@@ -197,6 +201,7 @@
 
             <div class="game-controls">
                 <button class="convert-btn" id="submitBtn">Submit Guess</button>
+                <button class="convert-btn" id="nextWordBtn" hidden>Next Word ➜</button>
                 <button class="hint-btn" id="hintBtn">Hint (<span id="hintCost">15</span>&#9670;)</button>
                 <button class="reset-btn" id="newGameBtn">New Game</button>
                 <button class="clear-btn" id="clearBtn">Clear</button>
@@ -229,20 +234,19 @@
                 <button class="modal-close" data-close-modal="rulesModal">&times;</button>
             </div>
             <div class="modal-body">
-                <p><strong>1. The cipher.</strong> Every letter has a number: A=1, B=2, ... Z=26 (see the
-                Reference Guide sidebar — it's always visible).</p>
+                <p><strong data-i18n="rule1Title">1. The cipher.</strong> <span data-i18n="rule1Text">Every letter has a number: A=1, B=2, ... Z=26 (tap 🔤 at the top to show or hide the Reference Guide chart).</span></p>
 
-                <p><strong>2. The challenge.</strong> The secret word gets converted to numbers, those
+                <p><strong data-i18n="rule2Title">2. The challenge.</strong> <span data-i18n="rule2Text">The secret word gets converted to numbers, those
                 numbers are shuffled into a random order, and then joined into one long digit string with
                 no separators. That's what you see in the box at the top. Your job: figure out which
-                digits belong together, and unscramble them into a real word.</p>
+                digits belong together, and unscramble them into a real word.</span></p>
 
-                <p><strong>3. The red cumulative-sum boxes — read this one carefully.</strong> The small
-                red numbers under some letter boxes are <em>not</em> a single letter's value. They're a
-                <strong>running total</strong> of the answer's letter-values, added up left to right. That's
+                <p><strong data-i18n="rule3Title">3. The red cumulative-sum boxes — read this one carefully.</strong> <span data-i18n="rule3Text">The small
+                red numbers under some letter boxes are not a single letter's value. They're a
+                running total of the answer's letter-values, added up left to right. That's
                 why they climb well past 26 — they're a sum of several letters, not one. Use them to check
-                whether you've split the digits correctly so far. Example, for the word <strong>CAKE</strong>
-                (C=3, A=1, K=11, E=5):</p>
+                whether you've split the digits correctly so far. Example, for the word CAKE
+                (C=3, A=1, K=11, E=5):</span></p>
 
                 <div class="rules-example">
                     <div class="letter-box-wrapper">
@@ -262,21 +266,20 @@
                         <div class="cumulative-sum">20</div>
                     </div>
                 </div>
-                <p class="rules-example-caption">3, then 3+1=4, then 4+11=15, then 15+5=20 — each box shows the total so far, not just that one letter.</p>
+                <p class="rules-example-caption" data-i18n="rule3Example">3, then 3+1=4, then 4+11=15, then 15+5=20 — each box shows the total so far, not just that one letter.</p>
 
-                <p><strong>4. Multiple interpretations.</strong> Sometimes the scrambled digits can also be
+                <p><strong data-i18n="rule4Title">4. Multiple interpretations.</strong> <span data-i18n="rule4Text">Sometimes the scrambled digits can also be
                 split into a completely different real word by coincidence. When that happens, you'll see a
-                warning listing the alternate reading(s) — just for awareness, it doesn't change your target.</p>
+                warning listing the alternate reading(s) — just for awareness, it doesn't change your target.</span></p>
 
-                <p><strong>5. Scribble area.</strong> Freehand scratch space to work out your answer by
-                hand. It's purely for your own notes and clears automatically when you submit.</p>
+                <p><strong data-i18n="rule5Title">5. Scribble area.</strong> <span data-i18n="rule5Text">A text box to type out your working, like how you split the digits and which letters they give. It's purely for your own notes: it stays put after a wrong guess and clears when you move on to the next word.</span></p>
 
-                <p><strong>6. Hints.</strong> Spend Shards to instantly reveal one letter. Shards are earned
+                <p><strong data-i18n="rule6Title">6. Hints.</strong> <span data-i18n="rule6Text">Spend Shards to instantly reveal one letter. Shards are earned
                 by solving puzzles — more for solving on your first try, and a bonus if the round had a
-                multiple-interpretation warning.</p>
+                multiple-interpretation warning.</span></p>
 
-                <p><strong>7. Difficulty.</strong> Word length increases as your round number climbs, and
-                fewer cumulative-sum checkpoints are shown at higher difficulty.</p>
+                <p><strong data-i18n="rule7Title">7. Difficulty.</strong> <span data-i18n="rule7Text">Word length increases as your round number climbs, and
+                fewer cumulative-sum checkpoints are shown at higher difficulty.</span></p>
             </div>
         </div>
     </div>

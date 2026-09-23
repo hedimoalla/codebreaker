@@ -16,6 +16,14 @@
       rulesBtn: 'How to Play',
       audioToggleBtn: 'Toggle sound',
       alphabetToggleBtn: 'Show/hide letter chart (A=1 … Z=26)',
+      playDaily: 'Play Daily',
+      dailyWord: "Today's word",
+      dailyComplete: '🎯 Daily Challenge Complete!',
+      dailyMissed: 'Daily Challenge Over',
+      dailyTime: 'Time',
+      dailyStreak: 'Current Streak',
+      dailyComeBack: 'Come back tomorrow for a new word!',
+      backToMenu: 'Back to Menu',
       achievementsBtn: 'Achievements',
       storeBtn: 'Store',
       settingsBtn: 'Settings',
@@ -38,6 +46,7 @@
       // Scribble area
       scribbleHeader: '✏️ Scribble Area - Draft your solution',
       clearCanvas: 'Clear',
+      scribblePlaceholder: 'Type your notes here, e.g. 3 1 11 5 = C A K E',
 
       // Ambiguity warning
       ambiguityWarning: '⚠️ Multiple interpretations possible! Here\'s how the digits could be parsed:',
@@ -47,6 +56,7 @@
 
       // Controls
       submitGuess: 'Submit Guess',
+      nextWord: 'Next Word ➜',
       hint: 'Hint',
       newGame: 'New Game',
       clear: 'Clear',
@@ -64,20 +74,20 @@
 
       // How to Play modal
       howToPlay: 'How to Play',
-      rule1: '1. The cipher.',
-      rule1Text: 'Every letter has a number: A=1, B=2, ... Z=26 (see the Reference Guide sidebar — it\'s always visible).',
-      rule2: '2. The challenge.',
+      rule1Title: '1. The cipher.',
+      rule1Text: 'Every letter has a number: A=1, B=2, ... Z=26 (tap 🔤 at the top to show or hide the Reference Guide chart).',
+      rule2Title: '2. The challenge.',
       rule2Text: 'The secret word gets converted to numbers, those numbers are shuffled into a random order, and then joined into one long digit string with no separators. That\'s what you see in the box at the top. Your job: figure out which digits belong together, and unscramble them into a real word.',
-      rule3: '3. The red cumulative-sum boxes — read this one carefully.',
+      rule3Title: '3. The red cumulative-sum boxes — read this one carefully.',
       rule3Text: 'The small red numbers under some letter boxes are not a single letter\'s value. They\'re a running total of the answer\'s letter-values, added up left to right. That\'s why they climb well past 26 — they\'re a sum of several letters, not one. Use them to check whether you\'ve split the digits correctly so far. Example, for the word CAKE (C=3, A=1, K=11, E=5):',
       rule3Example: '3, then 3+1=4, then 4+11=15, then 15+5=20 — each box shows the total so far, not just that one letter.',
-      rule4: '4. Multiple interpretations.',
+      rule4Title: '4. Multiple interpretations.',
       rule4Text: 'Sometimes the scrambled digits can also be split into a completely different real word by coincidence. When that happens, you\'ll see a warning listing the alternate reading(s) — just for awareness, it doesn\'t change your target.',
-      rule5: '5. Scribble area.',
-      rule5Text: 'Freehand scratch space to work out your answer by hand. It\'s purely for your own notes and clears automatically when you submit.',
-      rule6: '6. Hints.',
+      rule5Title: '5. Scribble area.',
+      rule5Text: 'A text box to type out your working, like how you split the digits and which letters they give. It\'s purely for your own notes: it stays put after a wrong guess and clears when you move on to the next word.',
+      rule6Title: '6. Hints.',
       rule6Text: 'Spend Shards to instantly reveal one letter. Shards are earned by solving puzzles — more for solving on your first try, and a bonus if the round had a multiple-interpretation warning.',
-      rule7: '7. Difficulty.',
+      rule7Title: '7. Difficulty.',
       rule7Text: 'Word length increases as your round number climbs, and fewer cumulative-sum checkpoints are shown at higher difficulty.',
 
       // Store modal
@@ -174,6 +184,14 @@
       rulesBtn: 'Comment jouer',
       audioToggleBtn: 'Activer le son',
       alphabetToggleBtn: 'Afficher/masquer le tableau des lettres (A=1 … Z=26)',
+      playDaily: 'Jouer au défi du jour',
+      dailyWord: 'Mot du jour',
+      dailyComplete: '🎯 Défi du jour réussi !',
+      dailyMissed: 'Défi du jour terminé',
+      dailyTime: 'Temps',
+      dailyStreak: 'Série actuelle',
+      dailyComeBack: 'Revenez demain pour un nouveau mot !',
+      backToMenu: 'Retour au menu',
       achievementsBtn: 'Réalisations',
       storeBtn: 'Boutique',
       settingsBtn: 'Paramètres',
@@ -196,6 +214,7 @@
       // Scribble area
       scribbleHeader: '✏️ Zone de brouillon - Préparez votre solution',
       clearCanvas: 'Effacer',
+      scribblePlaceholder: 'Tapez vos notes ici, ex. 3 1 11 5 = C A K E',
 
       // Ambiguity warning
       ambiguityWarning: '⚠️ Plusieurs interprétations possibles! Voici comment les chiffres pourraient être analysés:',
@@ -205,6 +224,7 @@
 
       // Controls
       submitGuess: 'Soumettre',
+      nextWord: 'Mot suivant ➜',
       hint: 'Indice',
       newGame: 'Nouvelle partie',
       clear: 'Effacer',
@@ -222,20 +242,20 @@
 
       // How to Play modal
       howToPlay: 'Comment jouer',
-      rule1: '1. Le chiffre.',
-      rule1Text: 'Chaque lettre a un numéro: A=1, B=2, ... Z=26 (voir le guide de référence sur le côté — il est toujours visible).',
-      rule2: '2. Le défi.',
+      rule1Title: '1. Le chiffre.',
+      rule1Text: 'Chaque lettre a un numéro: A=1, B=2, ... Z=26 (touchez 🔤 en haut pour afficher ou masquer le guide de référence).',
+      rule2Title: '2. Le défi.',
       rule2Text: 'Le mot secret est converti en nombres, ces nombres sont mélangés dans un ordre aléatoire, puis joints en une longue chaîne de chiffres sans séparateurs. C\'est ce que vous voyez dans la case en haut. Votre travail: comprendre quels chiffres vont ensemble et les brouiller dans un vrai mot.',
-      rule3: '3. Les cases rouges de somme cumulative — lisez attentivement.',
+      rule3Title: '3. Les cases rouges de somme cumulative — lisez attentivement.',
       rule3Text: 'Les petits chiffres rouges sous certaines cases de lettres ne sont pas la valeur d\'une seule lettre. C\'est un total cumulatif des valeurs des lettres de la réponse, ajoutées de gauche à droite. C\'est pourquoi ils montent bien au-delà de 26 — c\'est la somme de plusieurs lettres, pas une. Utilisez-les pour vérifier si vous avez bien divisé les chiffres jusqu\'à présent. Par exemple, pour le mot CAKE (C=3, A=1, K=11, E=5):',
       rule3Example: '3, puis 3+1=4, puis 4+11=15, puis 15+5=20 — chaque case montre le total jusqu\'à présent, pas juste cette lettre.',
-      rule4: '4. Interprétations multiples.',
+      rule4Title: '4. Interprétations multiples.',
       rule4Text: 'Parfois, les chiffres brouillés peuvent également être divisés en un mot réel complètement différent par coïncidence. Quand cela se produit, vous verrez un avertissement répertoriant les lectures alternatives — juste pour votre connaissance, cela ne change pas votre cible.',
-      rule5: '5. Zone de brouillon.',
-      rule5Text: 'Espace de travail à main levée pour résoudre votre réponse à la main. C\'est uniquement pour vos propres notes et s\'efface automatiquement lorsque vous soumettez.',
-      rule6: '6. Indices.',
+      rule5Title: '5. Zone de brouillon.',
+      rule5Text: 'Une zone de texte pour taper votre raisonnement, par exemple comment vous découpez les chiffres et les lettres obtenues. C\'est uniquement pour vos propres notes : elle reste en place après une mauvaise réponse et s\'efface quand vous passez au mot suivant.',
+      rule6Title: '6. Indices.',
       rule6Text: 'Dépensez des fragments pour révéler instantanément une lettre. Les fragments sont gagnés en résolvant des énigmes — plus pour résoudre au premier essai, et un bonus si la manche avait un avertissement d\'interprétations multiples.',
-      rule7: '7. Difficulté.',
+      rule7Title: '7. Difficulté.',
       rule7Text: 'La longueur du mot augmente à mesure que votre numéro de manche augmente, et moins de points de contrôle de somme cumulative sont affichés à une difficulté plus élevée.',
 
       // Store modal

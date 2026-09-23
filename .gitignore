@@ -45,3 +45,6 @@ npm-debug.log*
 
 # Test coverage
 coverage/
+
+# Supabase CLI local link state
+supabase/.temp/
