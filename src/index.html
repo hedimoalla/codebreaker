@@ -19,11 +19,22 @@
                 <h3>Select Language</h3>
                 <div class="language-options">
                     <button class="language-btn" id="enLangBtn" data-language="en">
-                        <span class="language-flag">🇬🇧</span>
+                        <svg class="language-flag" viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                            <clipPath id="ukFlagClip"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
+                            <rect width="60" height="30" fill="#012169"/>
+                            <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
+                            <path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukFlagClip)" stroke="#C8102E" stroke-width="4"/>
+                            <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
+                            <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+                        </svg>
                         <span class="language-name">English</span>
                     </button>
                     <button class="language-btn" id="frLangBtn" data-language="fr">
-                        <span class="language-flag">🇫🇷</span>
+                        <svg class="language-flag" viewBox="0 0 3 2" aria-hidden="true">
+                            <rect width="1" height="2" fill="#002654"/>
+                            <rect x="1" width="1" height="2" fill="#fff"/>
+                            <rect x="2" width="1" height="2" fill="#CE1126"/>
+                        </svg>
                         <span class="language-name">Français</span>
                     </button>
                 </div>
@@ -115,6 +126,7 @@
                         <span id="shardsValue">0</span>
                     </div>
                     <button class="icon-btn" id="rulesBtn" title="How to Play">?</button>
+                    <button class="icon-btn" id="alphabetToggleBtn" title="Show/hide letter chart" aria-pressed="true">🔤</button>
                     <button class="icon-btn" id="audioToggleBtn" title="Toggle sound">🔊</button>
                     <button class="icon-btn" id="languageToggleBtn" title="EN/FR">🌐</button>
                     <button class="icon-btn" id="themeToggleBtn" title="Light/Dark">🌙</button>
@@ -153,6 +165,13 @@
                     <div class="hint-text">Hints:</div>
                     <div class="word-length-hint" id="wordLengthHint">Word length: ? letters</div>
                     <div class="difficulty-hint" id="difficultyHint">Difficulty: —</div>
+                </div>
+            </div>
+
+            <div class="alphabet-reference" id="alphabetReference">
+                <strong>Reference Guide:</strong>
+                <div class="alphabet-grid" id="alphabetGrid">
+                    <!-- Populated by game.js from A=1 to Z=26 -->
                 </div>
             </div>
 
@@ -198,13 +217,6 @@
                 <div class="session-row"><span>Best round</span><span id="bestRoundValue">1</span></div>
                 <div class="session-row"><span>Total correct</span><span id="lifetimeCorrectValue">0</span></div>
                 <div class="session-row"><span>Achievements</span><span id="achievementsCountValue">0/0</span></div>
-            </div>
-
-            <div class="alphabet-reference">
-                <strong>Reference Guide:</strong>
-                <div class="alphabet-grid" id="alphabetGrid">
-                    <!-- Populated by game.js from A=1 to Z=26 -->
-                </div>
             </div>
         </div>
     </div>

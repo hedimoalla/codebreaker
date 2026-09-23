@@ -214,7 +214,7 @@
       hasSeenRules: false,
       achievements: {},
       purchases: {},
-      settings: { audioEnabled: true, inkTheme: 'default', adsFree: false },
+      settings: { audioEnabled: true, inkTheme: 'default', adsFree: false, showAlphabet: true },
       dailyStreak: 0,
       dailyBestRound: 0,
       lastDailyPlayDate: null
@@ -305,7 +305,7 @@
       'letterContainer', 'submitBtn', 'hintBtn', 'hintCost', 'newGameBtn', 'clearBtn',
       'result', 'resultText', 'validityIndicator', 'validityText',
       'shardsValue', 'audioToggleBtn', 'achievementsBtn', 'storeBtn', 'settingsBtn', 'rulesBtn', 'rulesModal',
-      'languageToggleBtn', 'themeToggleBtn',
+      'languageToggleBtn', 'themeToggleBtn', 'alphabetToggleBtn', 'alphabetReference',
       'bestRoundValue', 'lifetimeCorrectValue', 'achievementsCountValue', 'alphabetGrid',
       'storeModal', 'storeItems', 'achievementsModal', 'achievementsList',
       'settingsModal', 'audioToggleCheckbox', 'inkThemeSelect', 'adsStatusLabel', 'cloudSaveToggle',
@@ -504,7 +504,8 @@
   // Round flow
   // ===========================================================================
   function startNewRound() {
-    state.run.currentWord = WORDSDB.randomWordForRound(state.run.round);
+    const tier = getTierForRound(state.run.round);
+    state.run.currentWord = WORDSDB.randomWordForTier(tier);
     const numbers = wordToNumbers(state.run.currentWord);
     state.run.currentNumbers = numbers.join('-');
     state.run.scrambledSequence = scrambleNumbers(numbers);
@@ -515,7 +516,6 @@
     state.run.roundIsAmbiguous = ambiguousMatches.length > 1;
     renderAmbiguity(ambiguousMatches);
 
-    const tier = getTierForRound(state.run.round);
     const i18n = window.I18n;
     state.dom.challengeNumbers.textContent = state.run.scrambledSequence;
     const wordLengthKey = i18n.t('wordLength');
@@ -788,6 +788,7 @@
     // Update button titles for tooltips (keep emoji, update titles only)
     state.dom.rulesBtn.title = i18n.t('howToPlay');
     state.dom.audioToggleBtn.title = i18n.t('audioToggleBtn');
+    state.dom.alphabetToggleBtn.title = i18n.t('alphabetToggleBtn');
     state.dom.languageToggleBtn.title = `${i18n.t('language')}: ${i18n.getLanguage().toUpperCase()}`;
     state.dom.themeToggleBtn.title = `${i18n.t('theme')}: ${i18n.t(i18n.getTheme())}`;
     state.dom.achievementsBtn.title = i18n.t('achievements');
@@ -992,6 +993,9 @@
     state.dom.cloudSaveToggle.checked = state.profile.settings.cloudSaveEnabled || false;
     state.dom.audioToggleBtn.textContent = state.profile.settings.audioEnabled ? '\u{1F50A}' : '\u{1F507}';
     state.dom.audioToggleBtn.classList.toggle('muted', !state.profile.settings.audioEnabled);
+    state.dom.alphabetReference.hidden = !state.profile.settings.showAlphabet;
+    state.dom.alphabetToggleBtn.classList.toggle('muted', !state.profile.settings.showAlphabet);
+    state.dom.alphabetToggleBtn.setAttribute('aria-pressed', String(state.profile.settings.showAlphabet));
     document.body.classList.remove('theme-default', 'theme-neon', 'theme-gold');
     document.body.classList.add(`theme-${state.profile.settings.inkTheme}`);
     AudioFX.setEnabled(state.profile.settings.audioEnabled);
@@ -1001,6 +1005,13 @@
 
   function toggleAudio() {
     state.profile.settings.audioEnabled = !state.profile.settings.audioEnabled;
+    applySettingsToUi();
+    persistProfile();
+    AudioFX.click();
+  }
+
+  function toggleAlphabet() {
+    state.profile.settings.showAlphabet = !state.profile.settings.showAlphabet;
     applySettingsToUi();
     persistProfile();
     AudioFX.click();
@@ -1205,6 +1216,7 @@
     state.dom.storeBtn.addEventListener('click', () => openModal('storeModal'));
     state.dom.settingsBtn.addEventListener('click', () => openModal('settingsModal'));
     state.dom.audioToggleBtn.addEventListener('click', toggleAudio);
+    state.dom.alphabetToggleBtn.addEventListener('click', toggleAlphabet);
 
     document.querySelectorAll('[data-close-modal]').forEach((btn) => {
       btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));

@@ -54,10 +54,9 @@
     return word;
   }
 
-  function randomWordForRound(round, lang) {
+  function randomWordForTier(tier, lang) {
     ensureReady();
     const language = lang || (typeof root.I18n !== 'undefined' ? root.I18n.getLanguage() : 'en');
-    const tier = root.CONSTANTS.tierForRound(round);
     const lengths = [...tier.lengths];
     for (let i = lengths.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -102,7 +101,7 @@
     return c;
   }
 
-  const WORDSDB = { init, isValidWord, randomWordForRound, loadCustomList, wordCount };
+  const WORDSDB = { init, isValidWord, randomWordForTier, loadCustomList, wordCount };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = WORDSDB;
